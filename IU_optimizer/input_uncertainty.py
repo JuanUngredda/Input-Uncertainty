@@ -45,22 +45,7 @@ class Mult_Input_Uncert():
         return s2
 
 
-    def Fit_Inputs(Y =[]):
-        # takes data, and makes an unnormalized bar chart
-        Y = np.array(Y)
-        Y = list(Y[~np.isnan(Y)])
-        def Distr_Update():
 
-            L = (np.exp(-(1.0/(2.0*MUSIG0[:,1]))*np.sum(np.array((np.matrix(MUSIG0[:,0]).T  - Y))**2.0,axis=1))*(1.0/np.sqrt(2*np.pi*MUSIG0[:,1]))**len(Y))
-            L = np.array(L).reshape(len(MU),len(SIG))
-            dmu = MU[1]-MU[0]
-            dsig = SIG[1]-SIG[0]
-            LN = np.sum(L*dmu*dsig)
-            P = L/LN
-            marg_mu = np.sum(P,axis=1)*dsig
-            return marg_mu
-        Dist = Distr_Update()
-        return MU, Dist
 
 
 
