@@ -1,11 +1,11 @@
-from IU_optimizer import DeltaLoss
+from IU_optimizer.input_uncertainty import DeltaLoss
 from IU_optimizer.utils import toyfun
 from IU_optimizer.utils import toysource
 
 
-output = DeltaLoss(simulator = toyfun,
+output = DeltaLoss(test_fun = toyfun,
                    xran = toyfun.x_range,
                    wran = toyfun.w_ran,
-                   external_source = toysource,
+                   info_source = toysource,
                    iu_distro="Gaussian"
                    )
