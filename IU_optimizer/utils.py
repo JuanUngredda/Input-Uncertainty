@@ -1,21 +1,23 @@
 import numpy as np
 import scipy
-from scipy.stats.norm import cdf as normcdf
-from scipy.stats.norm import pdf as normpdf
+from scipy.stats.norm import cdf as normCDF
+from scipy.stats.norm import pdf as normPDF
 
-# in this file put any simple little functions that are repeated and reused.
+# In this file put any simple little functions that can be abstracted out of the
+# main code, eg samplers, plotting, saving, more complex mathematical operations
+# tat don't have any persistent state etc.
 
 def Fit_Inputs(Y, MUSIG0, MU, SIG):
     # Takes data Y, and makes an unnormalized bar chart Dist.
     #
     # ARGS
-    #  - Y : vector of samples
-    #  - MUSIG0: matrix
-    #  - MU: vector
-    #  - SIG
+    #  - Y : vector of samples.....
+    #  - MUSIG0: matrix of .....
+    #  - MU: vector for....
+    #  - SIG: vector for....
     #
     # RETURNS
-    #  - MU: vector
+    #  - MU: vector.....
     #  - Dist: barchart
 
     Y = np.array(Y)
@@ -67,12 +69,12 @@ def KG(mu, sig):
 
     C.append(float("inf"))
 
-    cdf_C = normcdf(C)
-    diff_cdf_D = cdf_C[1:] - cdf_C[:-1]
+    cdf_C = normCDF(C)
+    diff_CDF = cdf_C[1:] - cdf_C[:-1]
 
-    pdf_C = normpdf(C)
-    diff_pdf_D = pdf_C[1:] - pdf_C[:-1]
+    pdf_C = normPDF(C)
+    diff_PDF = pdf_C[1:] - pdf_C[:-1]
 
-    out = np.sum( a[A]*diff_cdf_D + b[A]*diff_pdf_D ) - np.max(mu)
+    out = np.sum( a[A]*diff_CDF + b[A]*diff_PDF ) - np.max(mu)
 
     return out
