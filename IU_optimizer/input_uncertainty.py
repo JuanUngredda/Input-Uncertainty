@@ -181,27 +181,6 @@ class Mult_Input_Uncert():
         obj_v = np.sum(m.predict(KG_Mc_Input.XiAd)[0].reshape(len(KG_Mc_Input.Xi),len(KG_Mc_Input.Ad)),axis=1)
         obj_v = np.array(obj_v).reshape(len(obj_v),1)
 
-        def KG(musig):
-            n = len(musig)
-            O = musig[:,1].argsort()
-            b = musig[O][:,1]
-            a = musig[O][:,0]
-
-            A=[0]
-            C=[-float("inf")]
-            while A[-1]<n-1:
-                s = A[-1]
-                si = range(s+1,n)
-                Ci = -(a[s]-a[si])/(b[s]-b[si])
-                bestsi=np.argmin(Ci)
-                C.append(Ci[bestsi])
-                A.append(si[bestsi])
-
-            C.append(float("inf"))
-
-
-            out = np.sum(a[A]*(scipy.stats.norm.cdf(C[1:len(C)])-scipy.stats.norm.cdf(C[0:-1])) + b[A]*(scipy.stats.norm.pdf(C[0:-1])-scipy.stats.norm.pdf(C[1:len(C)]))) - np.max(musig[:,0])
-            return out
 
         def KG_IU(xa):
 

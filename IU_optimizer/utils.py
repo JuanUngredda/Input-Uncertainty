@@ -1,30 +1,78 @@
 import numpy as np
+import scipy
+from scipy.stats.norm import cdf as normcdf
+from scipy.stats.norm import pdf as normpdf
 
+# in this file put any simple little functions that are repeated and reused.
 
-def toyfun(x, w):
-
+def Fit_Inputs(Y, MUSIG0, MU, SIG):
+    # Takes data Y, and makes an unnormalized bar chart Dist.
     #
     # ARGS
-    #  x: scalar decision variable
-    #  w: scalaer input parameter
+    #  - Y : vector of samples
+    #  - MUSIG0: matrix
+    #  - MU: vector
+    #  - SIG
     #
     # RETURNS
-    #  y: scalar output function
+    #  - MU: vector
+    #  - Dist: barchart
 
-    assert len(x)==1, "toyfun only works with 1D x!"
-    assert len(w)==1, "toyfun only works with 1D w!"
+    Y = np.array(Y)
+    Y = list(Y[~np.isnan(Y)])
+    def Distr_Update():
+        L = np.sum(np.array((np.matrix(MUSIG0[:,0]).T  - Y))**2.0,axis=1)
+        L = np.exp(-(1.0/(2.0*MUSIG0[:,1])) * L)
+        L = L*(1.0/np.sqrt(2*np.pi*MUSIG0[:,1]))**len(Y)
+        L = np.array(L).reshape(len(MU),len(SIG))
+        dmu = MU[1]-MU[0]
+        dsig = SIG[1]-SIG[0]
+        LN = np.sum(L*dmu*dsig)
+        P = L/LN
+        marg_mu = np.sum(P,axis=1)*dsig
+        return marg_mu
+    Dist = Distr_Update()
+    return MU, Dist
 
-    r = np.sqrt( ((x-0.2)**2 + (w-0.2)**2) )
 
-    y =  np.cos(r*2.*np.pi) / (r+2)
+def KG(mu, sig):
+    # Takes a set of intercepts and gradients of linear functions and returns
+    # the average hieght of the max of functions over Gaussain input.
+    #
+    # ARGS
+    # - mu: length n vector, initercepts of linear functions
+    # - sig: length n vector, gradients of linear functions
+    #
+    # IMPLICITLY ASSUMED ARGS
+    # - None
+    #
+    # RETURNS
+    # - out: scalar value is gaussain expectation of epigraph of lin. funs
 
-    return(y)
+    n = len(musig)
+    O = sig.argsort()
+    a = mu[O]
+    b = sig[O]
 
-# set valid input ranges as function attributes
-setattr(toyfun, 'x_ran', np.array([0.,1.])
-setattr(toyfun, 'w_ran', np.array([0.,1.])
 
+    A=[0]
+    C=[-float("inf")]
+    while A[-1]<n-1:
+        s = A[-1]
+        si = range(s+1,n)
+        Ci = -(a[s]-a[si])/(b[s]-b[si])
+        bestsi=np.argmin(Ci)
+        C.append(Ci[bestsi])
+        A.append(si[bestsi])
 
-def toysource(n_samples=1):
-    # a Gaussain centrered at 0.5, the middle of w_range for the toyfun
-    return( 0.5 + np.random.normal(size = (n_samples)) )
+    C.append(float("inf"))
+
+    cdf_C = normcdf(C)
+    diff_cdf_D = cdf_C[1:] - cdf_C[:-1]
+
+    pdf_C = normpdf(C)
+    diff_pdf_D = pdf_C[1:] - pdf_C[:-1]
+
+    out = np.sum( a[A]*diff_cdf_D + b[A]*(diff_pdf_D) ) - np.max(mu)
+
+    return out
