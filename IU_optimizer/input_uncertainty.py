@@ -40,7 +40,7 @@ class Mult_Input_Uncert():
         # THIS IS WHERE THE MAIN CODE FOR OPTIMIZATION GOES :)
         # This code is run when myoptimizer(sim_init=...) is called as if
         # it were a function. We could also just do myoptimizer.__call__(....)
-        # or we would make def optimize(sim_init=...) and call myoptimizer.optimize(...)
+        # or we would make def optimize(self, sim_init=...) and call myoptimizer.optimize(...)
         # this __call__ is a python keyword that is executed when the object is treated as a function
         #
         # ARGS:
@@ -56,7 +56,7 @@ class Mult_Input_Uncert():
         #  z: iu data
         #  otherstuff: I forgot....
 
-        dim = 2
+        dim = self.xran.shape[1] + self.wran.shape[1]
         x= np.linspace(0, 100, Nx) #vector of input variable
         MU = np.linspace(0,100,precision)
         SIG = np.linspace(0.025,100,precision)
