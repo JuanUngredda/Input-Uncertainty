@@ -19,14 +19,145 @@ from scipy.interpolate import interp1d
 
 class Mult_Input_Uncert():
 
-    def __init__(test_func, input_source, xran, wran):
-
+    def __init__(self, test_func, input_source, xran, wran):
+        # This code here is executed when we make a new optimizer myoptimizer = Mult_Input_Uncert()
+        #
+        # ARGS:
+        #  test_func: a callable function y = f(x, w) that returns simulations outputs
+        #  input_source: a callable source of data that returns "external" observations
+        #  xran: the upper and lower limit of x in f(x,w)
+        #  wran: the upper and lower limit of w in f(x,w)
+        #
+        # RETURNS
+        #  self: a Mult_Input_Uncert instance, __init__ is an initilizer/constructor!!
+        
         self.test_func = test_func
         self.input_source = input_source
         self.xran = xran
         self.wran = wran
 
+    def __call__(self, init_sample=10, Nx = 101, Nr=100, EndN=100, precision=100, ):
+        # THIS IS WHERE THE MAIN CODE FOR OPTIMIZATION GOES :)
+        # This code is run when myoptimizer(sim_init=...) is called as if
+        # it were a function. We could also just do myoptimizer.__call__(....)
+        # or we would make def optimize(sim_init=...) and call myoptimizer.optimize(...)
+        # this __call__ is a python keyword that is executed when the object is treated as a function
+        #
+        # ARGS:
+        #  init_sample: how many points to use to start the Gaussain process
+        #  Nx: discretization size over x space
+        #  Nr: discretization size over w space
+        #  EndN: sampling budget for optimization
+        #  precision: 
+        #
+        # RETURNS
+        #  OC: opportunity cost
+        #  xw: GP data
+        #  z: iu data
+        #  otherstuff: I forgot....
 
+        dim = 2
+        x= np.linspace(0, 100, Nx) #vector of input variable
+        MU = np.linspace(0,100,precision)
+        SIG = np.linspace(0.025,100,precision)
+        X = np.repeat(list(MU),len(SIG))
+        W=list(SIG)*len(MU)
+        MUSIG0 = np.c_[X,W]
+
+        MU_L = np.linspace(0,100,101)
+        SIG_L = np.linspace(0.025,100,101)
+        X_L = np.repeat(list(MU_L),len(SIG_L))
+        W_L=list(SIG_L)*len(MU_L)
+        MUSIG0_L = np.c_[X_L,W_L]
+        init_input_source = Input_Source(dim,0)
+        
+        # First get some simulation ( (X, W), Y) pairs for training the GP.
+        XA = np.c_[lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100]
+        Y = self.test_func(xa=XA)
+        ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
+
+        iLoss = []
+        OC = []
+        #===================================================================================
+        #True Func
+
+        XW0 = np.c_[ x, np.array([Input_Source.f_mean]*len(x))]
+        True_obj_v = test_func(xa=XW0,NoiseSD=0,gen=False)
+        obj     = lambda a: -1*np.mean(test_func(np.c_[[a],[Input_Source.f_mean]],NoiseSD=0,gen=False))
+        topX    = x[np.argmax(True_obj_v)]
+
+
+        if topX >= 100:
+            topX=99
+        elif topX <=0:
+            topX=1
+
+        topX = optimize.fminbound(obj, topX-1, topX+1,xtol =1e-16)
+        best_ = -1*obj(topX)
+
+        #=================================================================================================
+        Data =  np.array([[np.nan,np.nan]]) #init_input_source #
+        Ndata = 0
+
+        while len(XA) +  Ndata < EndN:
+
+            Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
+            self.model = GPy.models.GPRegression(np.array(XA) , np.array(Y).reshape(len(Y),1) , ker,noise_var=0.01)
+            Mult_Input_Uncert.m = m
+
+            Mult_Input_Uncert.KG=[]
+            Mult_Input_Uncert.DL1 = []
+            Mult_Input_Uncert.DL2 = []
+
+        #ERROR CURVE
+            if Ndata > 0:
+    #             print('Nr',Nr)
+                x_pdf1, pdf1 = Fit_Inputs(Data[:,0])
+                x_pdf2, pdf2 = Fit_Inputs(Data[:,1])
+
+                #Generation of RV
+                pdf1_gen = Gen_Sample(pdf1,N=Nr)
+                pdf2_gen = Gen_Sample(pdf2,N=Nr)
+                # Sample variable x inputs
+                Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx, list(pdf2_gen)*Nx ]
+            else:
+                pdf1_gen = np.random.random(Nr)*100
+                pdf2_gen = np.random.random(Nr)*100
+
+                Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx,list(pdf2_gen)*Nx]
+
+            IU = np.mean(self.model.predict(np.array(Sample))[0].reshape(Nx,Nr),axis=1)
+
+            Xr = x[np.argmax(IU)]
+
+
+            topobj = -1*obj(Xr)
+            DIF = best_ - topobj
+
+            OC.append(DIF)
+
+            #===============================================================================================
+
+            xa, p = KG_Mc_Input(XA,Y,self.model,Nx=Nx,Ns=20)
+
+            Comparison = np.concatenate(([KG_Mc_Input.bestEVI],[Delta_Loss(Data,i) for i in range(dim)]))
+            chs = np.argmax(Comparison)
+
+            d_point = np.array([[np.nan, np.nan]])
+            if chs == 0:
+                XA = np.concatenate((XA,xa)) ; Y = np.concatenate([Y,p])
+            else:
+
+                QA = chs - 1
+                IS = Input_Source(2,1,mv_gen = False)[0][QA]
+                d_point[:,QA] = IS
+                Data = np.concatenate((Data, d_point))
+                Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
+
+
+            N_I = [len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)]
+            return OC, N_I, Mult_Input_Uncert.var
+        
     def COV(self, xa1, xa2):
         #K = self.model.kern.K(model.X,model.X)
         L = self.chol_K #np.linalg.cholesky(K + (0.1**2.0)*np.eye(len(K)))
@@ -43,11 +174,6 @@ class Mult_Input_Uncert():
         K_ = self.model.kern.K(xa1, xa1)
         s2 = K_ - np.sum(Lk**2, axis=0)
         return s2
-
-
-
-
-
 
     def Gen_Sample(Dist, N=500):
         # generates N samples between 0 and 100 with given 'Dist' weights
@@ -204,121 +330,4 @@ class Mult_Input_Uncert():
         Y = test_func(np.array([list(KG_Mc_Input.bestxa)]),gen=False)
 
         return np.array([list(KG_Mc_Input.bestxa)]) , np.array(Y)
-
-    #=============================================================================================
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    #==============================================================================================
-    #Main Algorithm
-
-    #initialise Parameters
-
-        #Random variable generation for inputs
-
-    init_sample = 10 # Initial Sample size
-    Nx = 101 # Granularity x value
-    Nr =  100
-    EndN = 100
-    dim = 2
-    x= np.linspace(0,100,Nx) #vector of input variable
-
-    precision = 101
-    MU = np.linspace(0,100,precision)
-    SIG = np.linspace(0.025,100,precision)
-    X = np.repeat(list(MU),len(SIG))
-    W=list(SIG)*len(MU)
-    MUSIG0 = np.c_[X,W]
-
-    MU_L = np.linspace(0,100,101)
-    SIG_L = np.linspace(0.025,100,101)
-    X_L = np.repeat(list(MU_L),len(SIG_L))
-    W_L=list(SIG_L)*len(MU_L)
-    MUSIG0_L = np.c_[X_L,W_L]
-    init_input_source = Input_Source(dim,0)
-
-    #Train GP
-    XA = np.c_[lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100]
-    Y = test_func(xa=XA,gen=True)
-
-    ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
-
-    iLoss = []
-    OC = []
-    #===================================================================================
-    #True Func
-
-    XW0 = np.c_[ x, np.array([Input_Source.f_mean]*len(x))]
-    True_obj_v = test_func(xa=XW0,NoiseSD=0,gen=False)
-    obj     = lambda a: -1*np.mean(test_func(np.c_[[a],[Input_Source.f_mean]],NoiseSD=0,gen=False))
-    topX    = x[np.argmax(True_obj_v)]
-
-
-    if topX >= 100:
-        topX=99
-    elif topX <=0:
-        topX=1
-
-    topX = optimize.fminbound(obj, topX-1, topX+1,xtol =1e-16)
-    best_ = -1*obj(topX)
-
-    #=================================================================================================
-    Data =  np.array([[np.nan,np.nan]]) #init_input_source #
-    Ndata = 0
-
-    while len(XA) +  Ndata < EndN:
-
-        Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
-        self.model = GPy.models.GPRegression(np.array(XA) , np.array(Y).reshape(len(Y),1) , ker,noise_var=0.01)
-        Mult_Input_Uncert.m = m
-
-        Mult_Input_Uncert.KG=[]
-        Mult_Input_Uncert.DL1 = []
-        Mult_Input_Uncert.DL2 = []
-
-    #ERROR CURVE
-        if Ndata > 0:
-#             print('Nr',Nr)
-            x_pdf1, pdf1 = Fit_Inputs(Data[:,0])
-            x_pdf2, pdf2 = Fit_Inputs(Data[:,1])
-
-            #Generation of RV
-            pdf1_gen = Gen_Sample(pdf1,N=Nr)
-            pdf2_gen = Gen_Sample(pdf2,N=Nr)
-            # Sample variable x inputs
-            Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx, list(pdf2_gen)*Nx ]
-        else:
-            pdf1_gen = np.random.random(Nr)*100
-            pdf2_gen = np.random.random(Nr)*100
-
-            Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx,list(pdf2_gen)*Nx]
-
-        IU = np.mean(self.model.predict(np.array(Sample))[0].reshape(Nx,Nr),axis=1)
-
-        Xr = x[np.argmax(IU)]
-
-
-        topobj = -1*obj(Xr)
-        DIF = best_ - topobj
-
-        OC.append(DIF)
-
-        #===============================================================================================
-
-        xa, p = KG_Mc_Input(XA,Y,self.model,Nx=Nx,Ns=20)
-
-        Comparison = np.concatenate(([KG_Mc_Input.bestEVI],[Delta_Loss(Data,i) for i in range(dim)]))
-        chs = np.argmax(Comparison)
-
-        d_point = np.array([[np.nan, np.nan]])
-        if chs == 0:
-            XA = np.concatenate((XA,xa)) ; Y = np.concatenate([Y,p])
-        else:
-
-            QA = chs - 1
-            IS = Input_Source(2,1,mv_gen = False)[0][QA]
-            d_point[:,QA] = IS
-            Data = np.concatenate((Data, d_point))
-            Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
-
-    N_I = [len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)]
-    return OC, N_I, Mult_Input_Uncert.var
 
