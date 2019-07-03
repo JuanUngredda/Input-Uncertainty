@@ -30,13 +30,14 @@ class Mult_Input_Uncert():
         #
         # RETURNS
         #  self: a Mult_Input_Uncert instance, __init__ is an initilizer/constructor!!
-        
+
         self.test_func = test_func
         self.input_source = input_source
         self.xran = xran
         self.wran = wran
 
-    def __call__(self, init_sample=10, Nx = 101, Nr=100, EndN=100, precision=100, ):
+    def __call__(self, init_sample=10, Nx = 101, Nr=100, EndN=100, precision=100,
+                 seed=1):
         # THIS IS WHERE THE MAIN CODE FOR OPTIMIZATION GOES :)
         # This code is run when myoptimizer(sim_init=...) is called as if
         # it were a function. We could also just do myoptimizer.__call__(....)
@@ -48,7 +49,7 @@ class Mult_Input_Uncert():
         #  Nx: discretization size over x space
         #  Nr: discretization size over w space
         #  EndN: sampling budget for optimization
-        #  precision: 
+        #  precision:
         #
         # RETURNS
         #  OC: opportunity cost
@@ -70,7 +71,7 @@ class Mult_Input_Uncert():
         W_L=list(SIG_L)*len(MU_L)
         MUSIG0_L = np.c_[X_L,W_L]
         init_input_source = Input_Source(dim,0)
-        
+
         # First get some simulation ( (X, W), Y) pairs for training the GP.
         XA = np.c_[lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100]
         Y = self.test_func(xa=XA)
@@ -157,7 +158,7 @@ class Mult_Input_Uncert():
 
             N_I = [len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)]
             return OC, N_I, Mult_Input_Uncert.var
-        
+
     def COV(self, xa1, xa2):
         #K = self.model.kern.K(model.X,model.X)
         L = self.chol_K #np.linalg.cholesky(K + (0.1**2.0)*np.eye(len(K)))
@@ -330,4 +331,3 @@ class Mult_Input_Uncert():
         Y = test_func(np.array([list(KG_Mc_Input.bestxa)]),gen=False)
 
         return np.array([list(KG_Mc_Input.bestxa)]) , np.array(Y)
-
