@@ -322,13 +322,3 @@ class Mult_Input_Uncert():
     N_I = [len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)]
     return OC, N_I, Mult_Input_Uncert.var
 
-
-OC= []
-for i in range(100):
-    identifier = 100 + np.random.random()
-    OC ,N_I, var = Mult_Input_Uncert()
-    data = {'OC': OC,'len': [N_I]*len(OC),'var1':[var[0]]*len(OC),'var2':[var[1]]*len(OC)}
-    print('data',data)
-    gen_file = pd.DataFrame.from_dict(data)
-    path ='/home/rawsys/matjiu/PythonCodes/PHD/Input_Uncertainty/With_Input_Selection/Data_MC100/OC_'+str(i)+'_' + str(identifier) + '.csv'
-    gen_file.to_csv(path_or_buf=path)
