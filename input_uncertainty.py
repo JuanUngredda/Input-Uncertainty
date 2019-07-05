@@ -4,7 +4,7 @@ import numpy as np
 import scipy
 from scipy.optimize import minimize
 import time
-import pygmo as pg
+# import pygmo as pg
 from scipy.stats import uniform 
 from pyDOE import *
 from scipy import optimize
