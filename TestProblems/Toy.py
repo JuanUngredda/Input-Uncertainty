@@ -20,8 +20,8 @@ def toyfun(x, w):
     return(y)
 
 # set valid input ranges as function attributes
-setattr(toyfun, 'x_ran', np.array([0.,1.])
-setattr(toyfun, 'w_ran', np.array([0.,1.])
+setattr(toyfun, 'x_ran', np.array([0.,1.]))
+setattr(toyfun, 'w_ran', np.array([0.,1.]))
 
 
 def toysource(n_samples=1):

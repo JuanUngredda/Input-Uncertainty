@@ -5,20 +5,22 @@
 
 
 from IU_optimizer.Input_Uncertainty import Multi_Input_Uncert
-from IU_optimizer.utils import toyfun, toysource
-import np as np
+from TestProblems import toyfun, toysource
+import numpy as np
 import pandas as pd
 from pprint import pprint
 
 # initilize the optimizer
 myoptimizer = Multi_Input_Uncert(f=toyfun,
+                                 inf_src=toysource,
                                  xran=toyfun.xran,
                                  wran=toyfun.wran,
-                                 other_shit_required_to_by_delta_loss....)
+                                 inf_prior="Gaussian",
+                                 inf_lhood="Gaussian")
 
 # now run the optimizer 100 times and save all outputs
 
-OC ,N_I, var = myoptimizer(init_sample=10, iu_init=10, EndN=100, seed=i)
+OC ,N_I, var = myoptimizer(init_sample=10, iu_init=10, EndN=100, seed=1)
 
 data = {'OC': OC,
         'len': [N_I]*len(OC),
@@ -26,4 +28,3 @@ data = {'OC': OC,
         'var2':[var[1]]*len(OC)}
 
 pprint('data',data)
-t

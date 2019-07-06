@@ -19,7 +19,7 @@ from scipy.interpolate import interp1d
 
 class Mult_Input_Uncert():
 
-    def __init__(self, test_func, input_source, xran, wran):
+    def __init__(self, f, inf_src, xran, wran):
         # This code here is executed when we make a new optimizer myoptimizer = Mult_Input_Uncert()
         #
         # ARGS:
@@ -35,6 +35,7 @@ class Mult_Input_Uncert():
         self.input_source = input_source
         self.xran = xran
         self.wran = wran
+        self.prior=
 
     def __call__(self, init_sample=10, Nx = 101, Nr=100, EndN=100, precision=100,
                  seed=1):
