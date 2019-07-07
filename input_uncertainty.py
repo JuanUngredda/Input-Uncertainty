@@ -162,11 +162,11 @@ def Mult_Input_Uncert():
         return zn
 
     def Delta_Loss(Data,idx):
-        global Nr,Nx
+        global Nr, Nx
         
         Nd = 100
         #INPU: Matrix with N dimensions and S realisations
-        def W_aj(Y=np.array([]),a=np.array([])):
+        def W_aj(Y=np.array([]), a=np.array([])):
            
             MU = np.linspace(0,100,60)
             SIG = np.linspace(0.25,100,60)
@@ -315,7 +315,7 @@ def Mult_Input_Uncert():
     Nr =  100
     EndN = 100
     dim = 2
-    x= np.linspace(0,100,Nx) #vector of input variable
+    x = np.linspace(0,100, Nx) #vector of input variable
 
     precision = 101
     MU = np.linspace(0,100,precision)
@@ -361,7 +361,8 @@ def Mult_Input_Uncert():
     Ndata = 0
 
     while len(XA) +  Ndata < EndN:
-       
+        
+        print(len(XA) +  Ndata)
         Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
         m = GPy.models.GPRegression(np.array(XA) , np.array(Y).reshape(len(Y),1) , ker,noise_var=0.01)
         Mult_Input_Uncert.m = m
@@ -385,7 +386,7 @@ def Mult_Input_Uncert():
             pdf1_gen = np.random.random(Nr)*100
             pdf2_gen = np.random.random(Nr)*100
          
-            Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx,list(pdf2_gen)*Nx]
+            Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx, list(pdf2_gen)*Nx ]
 
         IU = np.mean(m.predict(np.array(Sample))[0].reshape(Nx,Nr),axis=1)
 

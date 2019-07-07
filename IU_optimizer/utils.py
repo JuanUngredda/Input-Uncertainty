@@ -1,7 +1,6 @@
 import numpy as np
 import scipy
-from scipy.stats.norm import cdf as normCDF
-from scipy.stats.norm import pdf as normPDF
+from scipy.stats import norm
 
 # In this file put any simple little functions that can be abstracted out of the
 # main code, eg samplers, plotting, saving, more complex mathematical operations
@@ -51,7 +50,7 @@ def KG(mu, sig):
     # RETURNS
     # - out: scalar value is gaussain expectation of epigraph of lin. funs
 
-    n = len(musig)
+    n = len(mu)
     O = sig.argsort()
     a = mu[O]
     b = sig[O]
@@ -69,10 +68,10 @@ def KG(mu, sig):
 
     C.append(float("inf"))
 
-    cdf_C = normCDF(C)
+    cdf_C = norm.cdf(C)
     diff_CDF = cdf_C[1:] - cdf_C[:-1]
 
-    pdf_C = normPDF(C)
+    pdf_C = norm.pdf(C)
     diff_PDF = pdf_C[1:] - pdf_C[:-1]
 
     out = np.sum( a[A]*diff_CDF + b[A]*diff_PDF ) - np.max(mu)
