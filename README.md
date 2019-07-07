@@ -60,7 +60,8 @@ def myfunc(x,y,z,vebose):
    assert len(z)==len(y) & len(x)==len(z); "x, y, z are not same lengths!"
    
    (put the most messy code you like here, as long as we know that the 
-    inputs are legit it is not going to
+    inputs are legit it is not going to spread to other functions
    
    
 ```
+- with 1. docstrings, 2. lines not too long, and 3. assert statements, these safety checks enable to use of hacky messy unstable code that you can share with others and reuse in the future!
