@@ -192,6 +192,7 @@ def Fit_Inputs(Y, MUSIG0, MU, SIG):
 
         return MU, marg_mu
 
+
 def Gen_Sample(Dist, N=500):
     # Given a pmf generates samples assuming pmf is over equally
     # spaced points in 0,...,100
@@ -207,6 +208,7 @@ def Gen_Sample(Dist, N=500):
     probabilities = Dist/np.sum(Dist)
     val = np.random.choice(elements, N, p=probabilities)
     return val        
+
 
 def Mult_Input_Uncert():
     global Nx, Nr, init_sample, x, MU, SIG, MUSIG0,MU_L, SIG_L, MUSIG0_L, Stop
