@@ -22,6 +22,7 @@ from utils import KG
 
 
 def rep_concat(x, n):
+    """ x is a 1D array, repeat and concat array n times"""
     assert len(x.shape)==1; "cannot duplicate a matrix!"
     out = np.repeat(x, n)
     out = out.reshape(-1, n)
@@ -31,20 +32,22 @@ def rep_concat(x, n):
 
 
 def COV(model, xa1, xa2, chol_K=None):
-    # Takes a GP model, and 2 points, returns post cov.
-    # ARGS
-    #  model: a gpy object
-    #  xa1: n1*d matrix
-    #  xa2: n2*d matrix
-    #  chol_K: cholesky decompositionb of kern(X,X)        
-    #
-    # RETURNS
-    #  s2: posterior GP cov matrix
+    """Takes a GP model, and 2 points, returns post cov.
+    ARGS
+     model: a gpy object
+     xa1: n1*d matrix
+     xa2: n2*d matrix
+     chol_K: optional precomuted cholesky decompositionb of kern(X,X)
+    
+    RETURNS
+     s2: posterior GP cov matrix
+     """
 
     assert len(xa1.shape)==2; "COV: xa1 must be rank 2"
     assert len(xa2.shape)==2; "COV: xa2 must be rank 2"
-    assert  xa1.shape[1]==model.X.shape[1]; "COV: xa1 must have same dim as model"
-    assert  xa2.shape[1]==model.X.shape[1]; "COV: xa2 must have same dim as model"
+    assert xa1.shape[1]==model.X.shape[1]; "COV: xa1 must have same dim as model"
+    assert xa2.shape[1]==model.X.shape[1]; "COV: xa2 must have same dim as model"
+    assert chol_K.shape[0]==model.X.shape[0]; "chol_K is not same dim as model.X"
 
     if chol_K is None:
         K = model.kern.K(model.X, model.X)
@@ -60,15 +63,16 @@ def COV(model, xa1, xa2, chol_K=None):
 
 
 def VAR(model, xa1, chol_K=None):
-    # Takes a GP model, and 1 point, returns post var.
-    #
-    # ARGS
-    #  model: a gpy object
-    #  xa1: n1*d matrix
-    #  chol_K: cholesky decompositionb of kern(X,X)
-    #
-    # RETURNS
-    #  s2: posterior GP cov matrix
+    """Takes a GP model, and 1 point, returns post var.
+    
+    ARGS
+     model: a gpy object
+     xa1: n1*d matrix
+     chol_K: cholesky decompositionb of kern(X,X)
+    
+    RETURNS
+     s2: posterior GP cov matrix
+     """
 
     assert len(xa1.shape)==2; "VAR: xa1 must be rank 2"
     assert  xa1.shape[1]==model.X.shape[1]; "VAR: xa1 have same dim as model"
@@ -83,27 +87,28 @@ def VAR(model, xa1, chol_K=None):
     return s2
 
 
-def test_func(xa, NoiseSD=np.sqrt(0.01), seed=11, gen=False):
-    # A toy function for generator, GP
-    #
-    # ARGS
-    #  xa: n*d matrix, points in space to eval testfun
-    #  NoiseSD: additive gaussaint noise SD
-    #  seed: int, RNG seed
-    #  gen: boolean, create new test function?
-    #
-    # ASSUMED ARGS
-    #  upper bounds: 100, 100, 100
-    #  lower bounds: 0,0,0
-    #  generative GP hypers: lx=10,10,10, var=3
-    #
-    # RETURNS
-    #  output: vector of length nrow(xa)
+def test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
+    """A toy function (and generator), GP
+    
+    ARGS
+     xa: n*d matrix, points in space to eval testfun
+     NoiseSD: additive gaussaint noise SD
+     seed: int, RNG seed
+     gen: boolean, create new test function?
+    
+    ASSUMED ARGS
+     upper bounds: 100, 100, 100
+     lower bounds: 0,0,0
+     generative GP hypers: lx=10,10,10, var=3
+    
+    RETURNS
+     output: vector of length nrow(xa)
+     """
     
     KERNEL = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
     
-    if gen == True or ~hasattr(testc_fun, "invCZ") or ~hasattr(test_func, "XtFi"):
-        
+    if gen == True or ~hasattr(testc_fun, "invCZ") or ~hasattr(test_func, "XF"):
+        np.radnom.seed(gen_seed)
         X0 = np.linspace(0, 100, 8)
         F1 = np.linspace(0, 100, 8)
         F2 = np.linspace(0, 100, 8)
@@ -117,16 +122,18 @@ def test_func(xa, NoiseSD=np.sqrt(0.01), seed=11, gen=False):
 
         test_func.invCZ = np.dot(invC, Z)
         test_func.XF    = XF
+        test_func.lb    = np.zeros((3,))
+        test_func.ub    = np.ones((3,))*100
 
     if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
 
-    assert len(xa.shape)==2, "Test_func: xa must be a matrix"
+    assert len(xa.shape)==2, "xa must be a matrix, each row a 3d point"
     assert xa.shape[1]==3, "Test_func: xa must 3d"
 
     ks = KERNEL.K(xa, test_func.XF)
     out = np.dot(ks, test_func.invCZ)
 
-    E = np.random.normal(0, NoiseSD, len(xa))
+    E = np.random.normal(0, NoiseSD, xa.shape[0])
 
     return (out.reshape(-1,1) + E.reshape(-1, 1))
 
