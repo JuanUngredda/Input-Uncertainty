@@ -201,7 +201,8 @@ def toy_inf_src(s, n=2, gen_seed=11, gen=False):
         toy_inf_src.n_sources = n
 
     rn = np.random.multivariate_normal(toy_inf_src.f_mean, toy_inf_src.f_cov, s)
-    return rn
+    
+    return rn[:,s],reshape(-1)
 
 
 def Fit_Inputs(Y, MUSIG0, MU, SIG):
@@ -324,8 +325,16 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         rec_X: the recomended X values
     """
 
+    IU_dims = np.array(IU_dims)
+
+    assert len(lb.shape)==1; "lb must be 1d array"
+    assert len(ub.shape)==1; "ub must be 1d array"
+    assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
+    assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
+    assert np.all(IU_dims>=0); "IU_dims too low!"
 
     x = np.linspace(0, 100, Nx) #vector of input variable
+    dim = len(IU_dims)
 
     # Make lattice over IU parameter space.
     precision = 101
@@ -559,7 +568,7 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         # Get KG of both simulation and Input uncertainty.
         topxa, topKG = KG_Mc_Input(XA, GPmodel, A1_samples, A2_samples, Nx=Nx, Ns=20)
         DL = np.array([Delta_Loss(Data, i, GPmodel, Xr) for i in range(dim)])
-        
+        topis, topDL = np.argmax(DL), np.max(DL)
         
         if topKG > np.max(DL):
             # if simulation is better
@@ -570,10 +579,9 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         
         else:
             # if info source is better
-            QA = np.argmax(DL)
-            print("Best is inf_src:", QA)
-            new_d = np.array([[np.nan, np.nan]])
-            new_d[0, QA] = inf_src(2, 1)[0, QA]
+            print("Best is info source: ", topis, topDL)
+            new_d = np.array([ [np.nan]*dim ])
+            new_d[0, is] = inf_src(topis)
             Data = np.vstack([Data, new_d])
             Ndata = np.sum(~np.isnan(Data))
         
