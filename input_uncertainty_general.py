@@ -1,24 +1,57 @@
 import GPy
-import csv
 import sys
 import numpy as np
 import scipy
 from scipy.optimize import minimize
-import time
-# import pygmo as pg
-from scipy.stats import uniform 
-from pyDOE import *
 from scipy import optimize
-import pandas as pd
+from scipy.stats import uniform, truncnorm, norm
 
-import scipy.integrate as integrate
-import scipy.special as special
+from pyDOE import lhs
 
 import time
-from scipy.stats import truncnorm
-from scipy.interpolate import interp1d
 
-from utils import KG
+
+def KG(mu, sig):
+    # Takes a set of intercepts and gradients of linear functions and returns
+    # the average hieght of the max of functions over Gaussain input.
+    #
+    # ARGS
+    # - mu: length n vector, initercepts of linear functions
+    # - sig: length n vector, gradients of linear functions
+    #
+    # IMPLICITLY ASSUMED ARGS
+    # - None
+    #
+    # RETURNS
+    # - out: scalar value is gaussain expectation of epigraph of lin. funs
+
+    n = len(mu)
+    O = sig.argsort()
+    a = mu[O]
+    b = sig[O]
+
+
+    A=[0]
+    C=[-float("inf")]
+    while A[-1]<n-1:
+        s = A[-1]
+        si = range(s+1,n)
+        Ci = -(a[s]-a[si])/(b[s]-b[si])
+        bestsi=np.argmin(Ci)
+        C.append(Ci[bestsi])
+        A.append(si[bestsi])
+
+    C.append(float("inf"))
+
+    cdf_C = norm.cdf(C)
+    diff_CDF = cdf_C[1:] - cdf_C[:-1]
+
+    pdf_C = norm.pdf(C)
+    diff_PDF = pdf_C[1:] - pdf_C[:-1]
+
+    out = np.sum( a[A]*diff_CDF + b[A]*diff_PDF ) - np.max(mu)
+
+    return out
 
 
 def rep_concat(x, n):
@@ -87,8 +120,8 @@ def VAR(model, xa1, chol_K=None):
     return s2
 
 
-def test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
-    """A toy function (and generator), GP
+def toy_test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
+    """A toy function (and generator if necessary upon first call), GP
     
     ARGS
      xa: n*d matrix, points in space to eval testfun
@@ -96,19 +129,22 @@ def test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
      seed: int, RNG seed
      gen: boolean, create new test function?
     
-    ASSUMED ARGS
-     upper bounds: 100, 100, 100
-     lower bounds: 0,0,0
-     generative GP hypers: lx=10,10,10, var=3
-    
     RETURNS
      output: vector of length nrow(xa)
      """
+
+    if len(xa.shape)==1 and xa.shape[0]==3: xa = xa.reshape((1,3))
+    assert len(xa.shape)==2; "xa must be an N*3 matrix"
+    assert xa.shape[1]==3; "xa must be 3d"
+     
     
     KERNEL = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
     
-    if gen == True or ~hasattr(testc_fun, "invCZ") or ~hasattr(test_func, "XF"):
-        np.radnom.seed(gen_seed)
+    if gen or not hasattr(toy_test_func, "invCZ"):
+        # If the test function has not been generated then generate it.
+
+        print("Generating test function")
+        np.random.seed(gen_seed)
         X0 = np.linspace(0, 100, 8)
         F1 = np.linspace(0, 100, 8)
         F2 = np.linspace(0, 100, 8)
@@ -120,49 +156,51 @@ def test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
         Z = np.random.multivariate_normal(mu, C).reshape(-1,1)
         invC = np.linalg.inv(C + np.eye(C.shape[0])*1e-3)
 
-        test_func.invCZ = np.dot(invC, Z)
-        test_func.XF    = XF
-        test_func.lb    = np.zeros((3,))
-        test_func.ub    = np.ones((3,))*100
+        toy_test_func.invCZ = np.dot(invC, Z)
+        toy_test_func.XF    = XF
+        toy_test_func.lb    = np.zeros((3,))
+        toy_test_func.ub    = np.ones((3,))*100
 
-    if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
+    # if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
 
-    assert len(xa.shape)==2, "xa must be a matrix, each row a 3d point"
-    assert xa.shape[1]==3, "Test_func: xa must 3d"
+    # assert len(xa.shape)==2, "xa must be an N*3 matrix, each row a 3d point"
+    # assert xa.shape[1]==3, "Test_func: xa must 3d"
 
-    ks = KERNEL.K(xa, test_func.XF)
-    out = np.dot(ks, test_func.invCZ)
+    ks = KERNEL.K(xa, toy_test_func.XF)
+    out = np.dot(ks, toy_test_func.invCZ)
 
     E = np.random.normal(0, NoiseSD, xa.shape[0])
 
     return (out.reshape(-1,1) + E.reshape(-1, 1))
 
 
-def Input_Source(n, s, mv_gen = False):
-    # A Toy info source generator!
-    # An mv norm sampler with randomly set params.
-    #
-    # ARGS
-    #  n: numer of input sources
-    #  s: size of data to generate
-    #  mv_gen: boolean, regenerate mvnrom params
-    #
-    # ASSUMED ARGS
-    #  Multi_Input_Uncert.var
-    #  sampler hypers
-    #
-    # RETURNS
-    #  rn: matrix of infor source samples.
+def toy_inf_src(s, n=2, gen_seed=11, gen=False):
+    """
+    A Toy info source generator!
+    An mv norm sampler with randomly set params.
+    
+    ARGS
+     n: numer of input sources
+     s: size of data to generate
+     mv_gen: boolean, regenerate mvnrom params
+    
+    RETURNS
+     rn: matrix of info source samples.
+    """
     
     ub = 85
     lb = 15
-    var = np.random.random(n)*(20-5)+5
-    Mult_Input_Uncert.var = var
-    if mv_gen == True or ~hasattr(Input_Source, "f_mean") or ~hasattr(Input_Source, "f_cov"):
-        Input_Source.f_mean = np.random.random(n)*(ub-lb)+lb
-        Input_Source.f_cov = np.multiply(np.identity(n), var)
+    
+    if gen or not hasattr(toy_inf_src, "f_mean"):
+        print("Generating params for " + str(n) + " info sources")
 
-    rn = np.random.multivariate_normal(Input_Source.f_mean, Input_Source.f_cov, s)
+        np.random.seed(gen_seed)
+        var = np.random.random(n)*(20-5)+5
+        toy_inf_src.f_mean = np.random.random(n)*(ub-lb)+lb
+        toy_inf_src.f_cov = np.multiply(np.identity(n), var)
+        toy_inf_src.n_sources = n
+
+    rn = np.random.multivariate_normal(toy_inf_src.f_mean, toy_inf_src.f_cov, s)
     return rn
 
 
@@ -217,70 +255,110 @@ def Gen_Sample(Dist, N=500):
     return val        
 
 
-def Mult_Input_Uncert():
-    global Nx, Nr, init_sample, x, MU, SIG, MUSIG0,MU_L, SIG_L, MUSIG0_L, Stop
-
-
-    def sample_predict_dens(Data, N, MUSIG_L, MU_L, SIG_L):
+def sample_predict_dens(Data, N, MUSIG0_L, MU_L, SIG_L):
         # Generate samples from the haluciated future pmf
         #
         # ARGS
         #  Data: matrix of observations of info sources
         #  N: sample size
-        #
-        # ASSUMED ARGS
-        #  MUSIG0:
+        #  MUSIG0_L:
         #  MU_L:
         #  SIG_L:
         #
         # RETURNS
         #  zn: samples from updated distro
-
-        # global MUSIG0, MU_L, SIG_L, MUSIG0_L
         
         Data = list(Data[~np.isnan(Data)])
-        def Distr_Update(Data):
-            Y = Data
-            L = []
-            fy = []
-            y_n1 = np.linspace(0, 100, 200)
-          
-            for i in MUSIG0_L:
-                fy.append(np.exp(-(1.0/(2.0*i[1]))*(i[0] - y_n1)**2.0))
-                L.append(np.exp(-(1.0/(2.0*i[1]))*np.sum((i[0] - Y)**2.0))*(1.0/np.sqrt(2*np.pi*i[1]))**len(Y))
-            dmu = MU_L[1]-MU_L[0]
-            dsig = SIG_L[1]-SIG_L[0]
-            dy_n1 = y_n1[1]-y_n1[0]
-
-            L = np.matrix(L)
-            fy = np.matrix(fy)
-            D = np.array((np.matrix(L))*np.matrix(fy)*dmu*dsig)
-            D = np.array((D/np.sum(D*dy_n1)))[0]
-            return D
+        # def Distr_Update(Data):
+        Y = Data
+        L = []
+        fy = []
+        y_n1 = np.linspace(0, 100, 200)
         
-        pdf_zn = Distr_Update(Data)
+        for i in MUSIG0_L:
+            fy.append(np.exp(-(1.0/(2.0*i[1]))*(i[0] - y_n1)**2.0))
+            L.append(np.exp(-(1.0/(2.0*i[1]))*np.sum((i[0] - Y)**2.0))*(1.0/np.sqrt(2*np.pi*i[1]))**len(Y))
+        dmu = MU_L[1]-MU_L[0]
+        dsig = SIG_L[1]-SIG_L[0]
+        dy_n1 = y_n1[1]-y_n1[0]
+
+        L = np.matrix(L)
+        fy = np.matrix(fy)
+        D = np.array((np.matrix(L))*np.matrix(fy)*dmu*dsig)
+        D = np.array((D/np.sum(D*dy_n1)))[0]
+        # return D
+        
+        pdf_zn = D #istr_Update(Data)
         
         zn = Gen_Sample(pdf_zn, N)        
         return zn
 
 
-    def Delta_Loss(Data, idx, model, Xr):
-        # Compute the improvement due to queerying the info source
-        #
-        # ARGS
-        #  Data: n*Ns matrix, info source observations
-        #  idx: which info source to compute DL for.
-        #
-        # IMPLICIT ARGS
-        #  Nr: 
-        #  Nx:
-        #
-        # RETURNS
-        #  DL: the delta loss for source idx!
+def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src, 
+                      n_fun_init=10, 
+                      n_inf_init=0, 
+                      Budget=100,
+                      Nx=101, 
+                      Nr=100):
 
-        global Nr,Nx
+    """
+    Optimizes the test function integrated over IU_dims. The integral
+    is also chaning ver time and learnt.
+
+    ARGS
+        test_func: callable function, returns scalar
+        lb: lower bounds on input to test_fun
+        ub: upper bounds on input to test_fun
+        IU_dims: int. list of dims of test_func that are IU
+        inf_src: callable function returning info source data
+        n_fun_init: number of inital points for GP model
+        n_inf_init: number of intial points for info source
+        Budget: total budget of calls to test_fun and inf_src
+        Nx: int, discretization size of X
+        Nr: int, discretization size of X
+
+    RETURNS
+        X: observed test_func inputs
+        Y: observed test_func outputs
+        Data: list of array of inf_src observations
+        rec_X: the recomended X values
+    """
+
+
+    x = np.linspace(0, 100, Nx) #vector of input variable
+
+    # Make lattice over IU parameter space.
+    precision = 101
+    MU = np.linspace(0, 100, precision)
+    SIG = np.linspace(0.025, 100, precision)
+    rep_MU = np.repeat(MU, precision)
+    rep_SIG = rep_concat(SIG, precision)
+    MUSIG0 = np.c_[rep_MU, rep_SIG]
+    
+    MU_L  = np.linspace(0,100,101)
+    SIG_L = np.linspace(0.025,100,101)
+
+    X_L   = np.repeat(MU_L, 101)
+    W_L   = rep_concat(SIG_L, 101)
+    MUSIG0_L = np.c_[X_L, W_L]
+
+    
+    def Delta_Loss(Data, idx, model, Xr, Nr=102, Nx=101, Nd=100):
+        """
+        Compute the improvement due to queerying the info source
         
-        Nd = 100
+        ARGS
+         Data: n*Ns matrix, info source observations
+         idx: which info source to compute DL for.
+         Xr: recomended X value with current data
+         Nr: int
+         Nx: int
+         Nd: int
+        
+        RETURNS
+         DL: the delta loss for source idx!
+
+        """
         
         def W_aj(Y, a):
             # 
@@ -438,75 +516,29 @@ def Mult_Input_Uncert():
 
 
     #=============================================================================================
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    #==============================================================================================
-    #Main Algorithm
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #=============================================================================================
     
-    #initialise Parameters
-    
-        #Random variable generation for inputs
-    
-    init_sample = 10 # Initial Sample size
-    Nx          = 101 # Granularity x value
-    Nr          = 100
-    EndN        = 100
-    dim         = 2
-    x           = np.linspace(0, 100, Nx) #vector of input variable
-
-    # Make lattice over IU parameter space.
-    precision = 101
-    MU = np.linspace(0, 100, precision)
-    SIG = np.linspace(0.025, 100, precision)
-    rep_MU = np.repeat(MU, precision)
-    rep_SIG = rep_concat(SIG, precision)
-    MUSIG0 = np.c_[rep_MU, rep_SIG]
-    
-    MU_L  = np.linspace(0,100,101)
-    SIG_L = np.linspace(0.025,100,101)
-    X_L   = np.repeat(MU_L, 101)
-    W_L   = rep_concat(SIG_L, 101)
-    MUSIG0_L = np.c_[X_L, W_L]
-
-    init_input_source = Input_Source(dim, 0)
-    
-    #Train GP
-    XA = lhs(3, init_sample)*100
-    Y  = test_func(xa=XA, gen=True)
-    
+    # Initilize GP model
+    XA = lhs(3, n_fun_init)*100
+    Y  = test_func(xa=XA)
     ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD=True)
 
-    # iLoss = []
-    # OC = []
-    #===================================================================================
-    #True Func
-    
-    # XW0 = np.c_[ x, np.array([Input_Source.f_mean]*len(x))]
-    # True_obj_v = test_func(xa=XW0,NoiseSD=0,gen=False)
-    # obj     = lambda a: -1*np.mean(test_func(np.c_[[a],[Input_Source.f_mean]],NoiseSD=0,gen=False))
-    # topX    = x[np.argmax(True_obj_v)]
-
-    
-    # if topX >= 100:    
-    #     topX=99
-    # elif topX <=0:
-    #     topX=1
-        
-    # topX = optimize.fminbound(obj, topX-1, topX+1,xtol =1e-16)
-    # best_ = -1*obj(topX)
-
-    #=================================================================================================
+    # Initilize input uncertainty model
     Data =  np.zeros((0, 2))
     Ndata = np.sum(~np.isnan(Data))
 
-    while XA.shape[0] +  Ndata < EndN:
+    print("Initialization complete", XA.shape[0] +  Ndata)
+
+    while XA.shape[0] +  Ndata < Budget:
        
         Ndata = np.sum(~np.isnan(Data))
-        print(XA.shape[0]+Ndata, ":")
+        print("Iteration ", XA.shape[0]+Ndata+1, ":")
 
         # Fit model to simulation data.
         GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
 
-        # Fit model to IU data and generate samples.
+        # Fit model to IU data and generate samples for KG MC integral.
         if Ndata > 0:
             _, A1_pdf = Fit_Inputs(Data[:,0], MUSIG0, MU, SIG)
             _, A2_pdf = Fit_Inputs(Data[:,1], MUSIG0, MU, SIG)
@@ -522,6 +554,7 @@ def Mult_Input_Uncert():
 
         IU = np.mean(GPmodel.predict(Sample)[0].reshape(Nx, Nr),axis=1)
         Xr = x[np.argmax(IU)]
+
 
         # Get KG of both simulation and Input uncertainty.
         topxa, topKG = KG_Mc_Input(XA, GPmodel, A1_samples, A2_samples, Nx=Nx, Ns=20)
@@ -540,20 +573,39 @@ def Mult_Input_Uncert():
             QA = np.argmax(DL)
             print("Best is inf_src:", QA)
             new_d = np.array([[np.nan, np.nan]])
-            new_d[0, QA] = Input_Source(2, 1)[0, QA]
+            new_d[0, QA] = inf_src(2, 1)[0, QA]
             Data = np.vstack([Data, new_d])
             Ndata = np.sum(~np.isnan(Data))
         
         print(" ")
 
-    return XA, Y, Data
+    return XA, Y, Data#, rec_X 
 
-OC= []
-for i in range(1):
-    identifier = 100 + np.random.random()
-    OC ,N_I, var = Mult_Input_Uncert() 
-    data = {'OC': OC,'len': [N_I]*len(OC),'var1':[var[0]]*len(OC),'var2':[var[1]]*len(OC)}
-    print('data',data)
-    gen_file = pd.DataFrame.from_dict(data)
-    path ='/home/rawsys/matjiu/PythonCodes/PHD/Input_Uncertainty/With_Input_Selection/Data_MC100/OC_'+str(i)+'_' + str(identifier) + '.csv'
-    gen_file.to_csv(path_or_buf=path)
+
+
+if __name__=="__main__":
+
+    
+    print("Calling Test Function")
+    xa = np.random.uniform(size=(10, 3))*100
+
+    print(xa)
+
+    print(toy_test_func(xa[0,:].reshape(-1), NoiseSD=0.))
+
+    print(toy_test_func(xa, NoiseSD=0.))
+
+    print("Calling info source")
+
+    print(toy_inf_src(0, 10))
+    print(toy_inf_src(1, 10))
+    
+    print("\nCalling optimizer")
+
+    X, Y, Data = Mult_Input_Uncert(test_func=toy_test_func,
+                                   lb=toy_test_func.lb,
+                                   ub=toy_test_func.lb,
+                                   IU_dims=[1,2],
+                                   inf_src=toy_inf_src)
+    
+    
