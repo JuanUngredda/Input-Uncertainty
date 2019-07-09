@@ -5,8 +5,127 @@ from scipy.optimize import minimize
 from scipy.stats import uniform, truncnorm, norm
 
 
+# Toy test function and info source.
+def toy_func(xa, NoiseSD=np.sqrt(1), gen_seed=11, gen=False):
+    """
+    A toy function (and generator if necessary upon first call), GP
+    
+    ARGS
+     xa: n*d matrix, points in space to eval testfun
+     NoiseSD: additive gaussaint noise SD
+     seed: int, RNG seed
+     gen: boolean, create new test function?
+    
+    RETURNS
+     output: vector of length nrow(xa)
+     """
+
+    if len(xa.shape)==1 and xa.shape[0]==3: xa = xa.reshape((1,3))
+    assert len(xa.shape)==2; "xa must be an N*3 matrix"
+    assert xa.shape[1]==3; "xa must be 3d"
+     
+    
+    KERNEL = GPy.kern.RBF(input_dim=3, variance=10000., lengthscale=([10,10,10]), ARD = True)
+    
+    if gen or not hasattr(toy_func, "invCZ"):
+        # If the test function has not been generated then generate it.
+
+        print("Generating test function")
+        np.random.seed(gen_seed)
+        X0 = np.linspace(0, 100, 8)
+        F1 = np.linspace(0, 100, 8)
+        F2 = np.linspace(0, 100, 8)
+
+        XF = np.array([[i,j,k] for i in X0 for j in F1 for k in F2])
+        mu = np.zeros( XF.shape[0] )
+        C  = KERNEL.K(XF, XF)
+
+        Z = np.random.multivariate_normal(mu, C).reshape(-1,1)
+        invC = np.linalg.inv(C + np.eye(C.shape[0])*1e-3)
+
+        toy_func.invCZ = np.dot(invC, Z)
+        toy_func.XF    = XF
+
+    toy_func.lb    = np.zeros((3,))
+    toy_func.ub    = np.ones((3,))*100
+
+    # if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
+
+    # assert len(xa.shape)==2, "xa must be an N*3 matrix, each row a 3d point"
+    # assert xa.shape[1]==3, "Test_func: xa must 3d"
+
+    ks = KERNEL.K(xa, toy_func.XF)
+    out = np.dot(ks, toy_func.invCZ)
+
+    E = np.random.normal(0, NoiseSD, xa.shape[0])
+
+    return (out.reshape(-1,1) + E.reshape(-1, 1))
+
+
+def toy_infsrc(n, src, n_srcs=2, gen_seed=11, gen=False):
+    """
+    A Toy info source generator!
+    An mv norm sampler with randomly set params.
+    
+    ARGS
+        n: number of samples
+        src: which source to use
+        n_srcs: int, number of source to generate when initiliazing
+        gen_seed: int, rng seed for generated initilization
+        gen: boolean, regenerate mvnrom params
+    
+    RETURNS
+        rn: vector of info source samples.
+    """
+    
+    ub = 85
+    lb = 15
+    
+    if gen or not hasattr(toy_inf_src, "f_mean"):
+        print("Generating params for " + str(n_srcs) + " info sources")
+
+        np.random.seed(gen_seed)
+        var = np.random.random(n_srcs)*(20-5)+5
+        toy_inf_src.f_mean = np.random.random(n_srcs)*(ub-lb)+lb
+        toy_inf_src.f_cov = np.multiply(np.identity(n_srcs), var)
+        toy_inf_src.n_srcs = n_srcs
+
+    assert src < toy_inf_src.n_srcs; "info source out of range"
+    # import pdb; pdb.set_trace()
+    rn = np.random.normal(loc=toy_inf_src.f_mean[src], 
+                          scale=toy_inf_src.f_cov[src, src], 
+                          size=n)
+    
+    return rn.reshape(-1)
+
+
+# Utilities, these functinos work as standalone functions.
+def lhs_box(n, lb, ub):
+    """
+    Random samples uniform lhs in a box with lower and upper bounds.
+    ARGS
+        n: number of points
+        lb: vector, lower bounds of each dim
+        ub: vector, upper bounds of each dim
+    
+    RETURNS
+        LL: an lhs in the box, lb < x < ub 
+    """
+
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+
+    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
+    assert np.all(lb<=ub); "lower must be below upper!"
+
+    LL = lb + lhs(len(lb), samples=n)*(ub-lb)
+
+    return(LL)
+
+
 def KG(mu, sig):
-    """Takes a set of intercepts and gradients of linear functions and returns
+    """
+    Takes a set of intercepts and gradients of linear functions and returns
     the average hieght of the max of functions over Gaussain input.
     
     ARGS
@@ -41,49 +160,54 @@ def KG(mu, sig):
     pdf_C = norm.pdf(C)
     diff_PDF = pdf_C[1:] - pdf_C[:-1]
 
-    out = np.sum( a[A]*diff_CDF + b[A]*diff_PDF ) - np.max(mu)
+    out = np.sum( a[A]*diff_CDF - b[A]*diff_PDF ) - np.max(mu)
 
     return out
 
 
-def rep_concat(x, n):
-    """ x is a 1D array, repeat and concat array n times"""
-    assert len(x.shape)==1; "cannot duplicate a matrix!"
-    out = np.repeat(x, n)
-    out = out.reshape(-1, n)
-    out = out.T
-    out = out.reshape(-1)
-    return(out)
-
-
-def COV(model, xa1, xa2, chol_K=None):
+def COV(model, xa1, xa2, chol_K=None, Lk2=None):
     """Takes a GP model, and 2 points, returns post cov.
     ARGS
-     model: a gpy object
-     xa1: n1*d matrix
-     xa2: n2*d matrix
-     chol_K: optional precomuted cholesky decompositionb of kern(X,X)
+        model: a gpy object
+        xa1: n1*d matrix
+        xa2: n2*d matrix
+        chol_K: optional precomuted cholesky decompositionb of kern(X,X)
+        Lk2: optional precomputed solve(chol_K, kernel(model.X, xa2)) (eg for XdAd)
     
     RETURNS
-     s2: posterior GP cov matrix
+        s2: posterior GP cov matrix
      """
 
     assert len(xa1.shape)==2; "COV: xa1 must be rank 2"
     assert len(xa2.shape)==2; "COV: xa2 must be rank 2"
     assert xa1.shape[1]==model.X.shape[1]; "COV: xa1 must have same dim as model"
     assert xa2.shape[1]==model.X.shape[1]; "COV: xa2 must have same dim as model"
-    assert chol_K.shape[0]==model.X.shape[0]; "chol_K is not same dim as model.X"
 
     if chol_K is None:
         K = model.kern.K(model.X, model.X)
         chol_K = np.linalg.cholesky(K + (0.1**2.0)*np.eye(len(K)))
+    else:
+        assert chol_K.shape[0]==model.X.shape[0]; "chol_K is not same dim as model.X"
+
 
     Lk1 = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
-    Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, xa2))
+
+    if Lk2 is None:
+        Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, xa2))
+    else:
+        assert Lk2.shape[0]==model.X.shape[0]; "Lk2 is not same dim as model.X"
+        assert Lk2.shape[1]==xa2.shape[0]; "Lk2 is not same dim as xa2"
 
     K_ = model.kern.K(xa1, xa2)
 
     s2 = np.matrix(K_) - np.matmul(Lk1.T, Lk2)
+
+    s2 = np.array(s2)
+
+    # make sure the output is correct!
+    assert s2.shape[0] == xa1.shape[0]; "output dim is wrong!" 
+    assert s2.shape[1] == xa2.shape[0]; "output dim is wrong!" 
+
     return s2
 
 
@@ -109,167 +233,185 @@ def VAR(model, xa1, chol_K=None):
     Lk = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
     K_ = model.kern.K(xa1, xa1)
     s2 = K_ - np.matmul(Lk.T, Lk)
+
+    s2 = np.array(s2)
+
     return s2
 
 
-def toy_test_func(xa, NoiseSD=np.sqrt(0.01), gen_seed=11, gen=False):
-    """A toy function (and generator if necessary upon first call), GP
-    
-    ARGS
-     xa: n*d matrix, points in space to eval testfun
-     NoiseSD: additive gaussaint noise SD
-     seed: int, RNG seed
-     gen: boolean, create new test function?
-    
-    RETURNS
-     output: vector of length nrow(xa)
-     """
-
-    if len(xa.shape)==1 and xa.shape[0]==3: xa = xa.reshape((1,3))
-    assert len(xa.shape)==2; "xa must be an N*3 matrix"
-    assert xa.shape[1]==3; "xa must be 3d"
-     
-    
-    KERNEL = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
-    
-    if gen or not hasattr(toy_test_func, "invCZ"):
-        # If the test function has not been generated then generate it.
-
-        print("Generating test function")
-        np.random.seed(gen_seed)
-        X0 = np.linspace(0, 100, 8)
-        F1 = np.linspace(0, 100, 8)
-        F2 = np.linspace(0, 100, 8)
-
-        XF = np.array([[i,j,k] for i in X0 for j in F1 for k in F2])
-        mu = np.zeros( XF.shape[0] )
-        C  = KERNEL.K(XF, XF)
-
-        Z = np.random.multivariate_normal(mu, C).reshape(-1,1)
-        invC = np.linalg.inv(C + np.eye(C.shape[0])*1e-3)
-
-        toy_test_func.invCZ = np.dot(invC, Z)
-        toy_test_func.XF    = XF
-
-    toy_test_func.lb    = np.zeros((3,))
-    toy_test_func.ub    = np.ones((3,))*100
-
-    # if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
-
-    # assert len(xa.shape)==2, "xa must be an N*3 matrix, each row a 3d point"
-    # assert xa.shape[1]==3, "Test_func: xa must 3d"
-
-    ks = KERNEL.K(xa, toy_test_func.XF)
-    out = np.dot(ks, toy_test_func.invCZ)
-
-    E = np.random.normal(0, NoiseSD, xa.shape[0])
-
-    return (out.reshape(-1,1) + E.reshape(-1, 1))
-
-
-def toy_inf_src(s, src, n_srcs=2, gen_seed=11, gen=False):
-    """
-    A Toy info source generator!
-    An mv norm sampler with randomly set params.
-    
-    ARGS
-        s: size of data to generate
-        src: which source to use
-        n_srcs: int, number of source to generate
-        gen_seed: int, rng seed
-        gen: boolean, regenerate mvnrom params 
-    
-    RETURNS
-        rn: vector of info source samples.
-    """
-    
-    
-
-    ub = 85
-    lb = 15
-    
-    if gen or not hasattr(toy_inf_src, "f_mean"):
-        print("Generating params for " + str(n_srcs) + " info sources")
-
-        np.random.seed(gen_seed)
-        var = np.random.random(n_srcs)*(20-5)+5
-        toy_inf_src.f_mean = np.random.random(n_srcs)*(ub-lb)+lb
-        toy_inf_src.f_cov = np.multiply(np.identity(n_srcs), var)
-        toy_inf_src.n_srcs = n_srcs
-
-    assert src < toy_inf_src.n_srcs; "info source out of range"
-    # import pdb; pdb.set_trace()
-    rn = np.random.normal(loc=toy_inf_src.f_mean[src], 
-                          scale=toy_inf_src.f_cov[src, src], 
-                          size=s)
-    
-    return rn.reshape(-1)
-
-
-def Fit_Inputs(Y, MUSIG0, MU, SIG):
-        # Computes MU and margs_mu from observations
-        # 
-        # ARGS
-        #  Y: observations
-        #  MUSIG0:
-        #  MU:
-        #  SIG:
-        #
-        # RETURNS
-        #  MU: posterior mean?
-        #  marg_mu: marginal mean
-
-        Y = np.array(Y)
-        Y = list(Y[~np.isnan(Y)])
-
-        L1 = (1.0/(2.0*MUSIG0[:,1]))
-        L1 = L1*np.sum(np.array((np.matrix(MUSIG0[:,0]).T  - Y))**2.0,axis=1)
-        L1 = np.exp(-L1)
-        L2 = (1.0/np.sqrt(2*np.pi*MUSIG0[:,1]))**len(Y)
-
-        L = L1*L2
+def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=5000, Nc=2, maxiter=80):
+        """Takes a GPy model, constructs and optimzes KG and 
+        returns the best xa and best KG value.
         
-        L = np.array(L).reshape(len(MU),len(SIG))
+        ARGS
+            model: GPy model
+            Xd: Nx*x_dim matrix discretizing X
+            Ad: Na*a_dim matrix discretizing A
+            lb: lower bounds on (x,a)
+            ub: upper bounds on (x,a)
+            Ns: number of START points, initial random search of KG
+            Nc: number of CONTINUED points, top Nc points from the Na to perform a Nelder Mead run.
+            maxiter: iterations of each Nelder Mead run.
+        
+        RETURNS
+            bestxa: the optimal xa
+            bestEVI: the largest KG value
+         """
 
-        dmu = MU[1]-MU[0]
-        dsig = SIG[1]-SIG[0]
-        LN = np.sum(L*dmu*dsig)
-        P = L/LN
-        marg_mu = np.sum(P, axis=1)*dsig
+        lb = lb.reshape(-1)
+        ub = ub.reshape(-1)
 
-        return MU, marg_mu
+        assert Ns > Nc; "more random points than optimzer points"
+        assert len(Xd.shape)==2; "Xd must be a matrix"
+        assert len(Ad.shape)==2; "Ad must be a matrix"
+        assert Xd.shape[0]>1; "Xd must have more than one row"
+        assert Ad.shape[0]>1; "Ad must have more than one row"
+        assert Ad.shape[1]+Xd.shape[1] == model.X.shape[1]; "Xd, Ad, must have same dim as data"
+        assert lb.shape[0]==ub.shape[0]; "bounds must have same dim"
+        assert lb.shape[0]==model.X.shape[1]; "bounds must have same dim as data"
+        assert np.all(lb<=ub); "lower must be below upper!"
+
+        # optimizer initial optim
+        KG_Mc_Input.bestEVI = -10
+        KG_Mc_Input.bestxa  = [-10]*model.X.shape[1]
+
+        noiseVar = model.Gaussian_noise.variance[0] 
+
+        dim_X  = Xd.shape[1]
+        len_Xd = Xd.shape[0]
+        len_Ad = Ad.shape[0]
+
+        XdAd   = np.hstack([np.repeat(Xd, len_Ad, axis=0), 
+                            np.tile(Ad, (len_Xd, 1))])
+
+        # Precompute the posterior mean at X_d integrated over A.
+        M_Xd = model.predict(XdAd)[0].reshape(len_Xd, len_Ad)
+        M_Xd = np.mean(M_Xd, axis=1).reshape(1,-1)
+
+        # Precompute cholesky decomposition.
+        K = model.kern.K(model.X, model.X)
+        chol_K = np.linalg.cholesky(K + (0.1**2.0)*np.eye(K.shape[0]))
+
+        Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, XdAd))
+
+        def KG_IU(xa):
+            xa = np.array(xa).reshape((1, -1))
+
+            if np.any(xa<lb) or np.any(xa>ub):
+                return(1000000)
+            else:
+                # The current x with all the A samples
+                tile_x = np.tile(xa[:,:dim_X], (len_Ad, 1))
+                newx_Ad = np.hstack([tile_x, Ad])
+
+                # The mean integrated over A.
+                # M_Xd is precomputed
+                M_x  = np.mean(model.predict(newx_Ad)[0])
+                MM   = np.c_[M_x, M_Xd].reshape(-1)
+
+                # The mean warping integrated over Ad
+                S_Xd = COV(model, xa, XdAd, chol_K, Lk2)
+                S_Xd = S_Xd.reshape(len_Xd, len_Ad)
+                S_Xd = np.mean(S_Xd, axis=1).reshape(1,-1)
+                S_x = np.mean(COV(model, xa, newx_Ad, chol_K))
+                SS  = np.c_[S_x, S_Xd].reshape(-1)
+
+                # variance of new observation
+                var_xa = VAR(model, xa, chol_K) + noiseVar
+                inv_sd = 1/np.sqrt(var_xa).reshape(())
+
+                SS = SS*inv_sd
+
+                # Finally compute KG!
+                out  = KG(MM, SS)
+                if out > KG_Mc_Input.bestEVI:
+                    KG_Mc_Input.bestEVI = out
+                    KG_Mc_Input.bestxa = xa
+
+                # print(out)
+                return -out
+
+        # Optimize that badboy! First do Ns random points, then take best Nc results 
+        # and do Nelder Mead starting from each of them.
+        XA_Ns  = lhs_box(Ns, lb, ub)
+        KG_Ns = np.array([KG_IU(XA_i) for XA_i in XA_Ns])
+        XA_Nc = KG_Ns.argsort()[-Nc:]
+        XA_Nc = XA_Ns[XA_Nc, :]
+
+        _  = [minimize(KG_IU, XA_i, method='nelder-mead', options={'maxiter': maxiter}) for XA_i in XA_Nc]
+        
+        return KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI
 
 
+# These functions still assume 0...100 and MUSIG etc
 def Gen_Sample(Dist, N=500):
-    # Given a pmf generates samples assuming pmf is over equally
-    # spaced points in 0,...,100
-    #
-    # ARGS
-    #  Dist: vector of probalilities
-    #  N: sample size
-    #
-    # RETURNS
-    #  val: samples from set of qually spaced points in 0,..,100
+    """Given a pmf generates samples assuming pmf is over equally
+    spaced points in 0,...,100
+    
+    ARGS
+     Dist: vector of probalilities
+     N: sample size
+    
+    RETURNS
+     val: samples from set of qually spaced points in 0,..,100
+    """
 
-    elements = np.linspace(0,100,len(Dist))
+    elements = np.linspace(0, 100, len(Dist))
     probabilities = Dist/np.sum(Dist)
     val = np.random.choice(elements, N, p=probabilities)
     return val        
+    
+
+def Fit_Inputs(Y, MUSIG0, MU, SIG):
+    """
+    Computes MU and margs_mu from observations
+    
+    ARGS
+        Y: observations
+        MUSIG0:
+        MU:
+        SIG:
+    
+    RETURNS
+        MU: posterior mean?
+        marg_mu: marginal mean
+    """
+
+    Y = np.array(Y)
+    Y = list(Y[~np.isnan(Y)])
+
+    L1 = (1.0/(2.0*MUSIG0[:,1]))
+    L1 = L1*np.sum(np.array((np.matrix(MUSIG0[:,0]).T  - Y))**2.0,axis=1)
+    L1 = np.exp(-L1)
+    L2 = (1.0/np.sqrt(2*np.pi*MUSIG0[:,1]))**len(Y)
+
+    L = L1*L2
+    
+    L = np.array(L).reshape(len(MU),len(SIG))
+
+    dmu = MU[1]-MU[0]
+    dsig = SIG[1]-SIG[0]
+    LN = np.sum(L*dmu*dsig)
+    P = L/LN
+    marg_mu = np.sum(P, axis=1)*dsig
+
+    return MU, marg_mu
 
 
 def sample_predict_dens(Data, N, MUSIG0_L, MU_L, SIG_L):
-        # Generate samples from the haluciated future pmf
-        #
-        # ARGS
-        #  Data: matrix of observations of info sources
-        #  N: sample size
-        #  MUSIG0_L:
-        #  MU_L:
-        #  SIG_L:
-        #
-        # RETURNS
-        #  zn: samples from updated distro
+        """Generate samples from the haluciated future pmf
         
+        ARGS
+         Data: matrix of observations of info sources
+         N: sample size
+         MUSIG0_L:
+         MU_L:
+         SIG_L:
+        
+        RETURNS
+         zn: samples from updated distro
+        """
+
         Data = list(Data[~np.isnan(Data)])
         # def Distr_Update(Data):
         Y = Data
@@ -300,8 +442,9 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
                       n_fun_init=10, 
                       n_inf_init=0, 
                       Budget=100,
-                      Nx=101, 
-                      Nr=100):
+                      Nx=101,
+                      Na=102, 
+                      Nr=103):
 
     """
     Optimizes the test function integrated over IU_dims. The integral
@@ -309,15 +452,16 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
 
     ARGS
         test_func: callable function, returns scalar
-        lb: lower bounds on input to test_fun
-        ub: upper bounds on input to test_fun
-        IU_dims: int. list of dims of test_func that are IU
+        lb: lower bounds on (x,a) vector input to test_fun
+        ub: upper bounds on (x,a) vector input to test_fun
+        IU_dims: int, list of dims of (x,a) that are 'a' (eg 2nd and 3rd dim [1,2])
         inf_src: callable function returning info source data
         n_fun_init: number of inital points for GP model
         n_inf_init: number of intial points for info source
         Budget: total budget of calls to test_fun and inf_src
         Nx: int, discretization size of X
-        Nr: int, discretization size of X
+        Na: int, discretization size of A
+        Nr: int, discretization size of ?
 
     RETURNS
         X: observed test_func inputs
@@ -328,15 +472,19 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
 
     IU_dims = np.array(IU_dims)
 
-    assert len(lb.shape)==1; "lb must be 1d array"
-    assert len(ub.shape)==1; "ub must be 1d array"
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+
+    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
+    assert np.all(lb<=ub); "lower must be below upper!"
+
     assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
     assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
     assert np.all(IU_dims>=0); "IU_dims too low!"
 
     # TODO: implement lb and ub, currently 0,100 is hardcoded.
     # TODO: implelemt arbitrary dimensions of x, a, currently dim_x=1, dim_a=2 is hardcoded.
-    # TODO: rename MU_L, SIG_L, MUSIG0 etc to A.
+    # TODO: rename application specific variables "MU_L", "SIG_L", "MUSIG0" etc to generalised "A".
     # TODO: use IU_dims! currently IU_dims=[1,2] is assumed.
     # TODO: future work, implement different priors/posteriors for IU? Beta?
 
@@ -345,33 +493,33 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
     dim = len(IU_dims)
 
     # Make lattice over IU parameter space.
-    precision = 101
-    MU = np.linspace(0, 100, precision)
-    SIG = np.linspace(0.025, 100, precision)
-    rep_MU = np.repeat(MU, precision)
-    rep_SIG = rep_concat(SIG, precision)
+    MU = np.linspace(0, 100, Na)
+    SIG = np.linspace(0.025, 100, Na)
+    rep_MU = np.repeat(MU, Na)
+    rep_SIG = np.tile(SIG, Na)
     MUSIG0 = np.c_[rep_MU, rep_SIG]
     
     MU_L  = np.linspace(0,100,101)
     SIG_L = np.linspace(0.025,100,101)
 
     X_L   = np.repeat(MU_L, 101)
-    W_L   = rep_concat(SIG_L, 101)
+    W_L   = np.tile(SIG_L, 101)
     MUSIG0_L = np.c_[X_L, W_L]
 
     
-    def Delta_Loss(Data, src, model, Xr, Sample, Nr=102, Nx=101, Nd=100):
-        # return(-100000000)
+    def Delta_Loss(model, Data, src, Xr, XA_grid, Nr=102, Nx=101, Nd=100):
+        return(-100000000)
         """
         Compute the improvement due to queerying the info source.
         
         ARGS
-         Data: n*Ns matrix, info source observations
-         src: which info source to compute DL for.
-         Xr: recomended X value with current data
-         Nr: int
-         Nx: int
-         Nd: int
+            model: GPy model
+            Data: n*Ns matrix, info source observations
+            src: which info source to compute DL for.
+            Xr: recomended X value with current data
+            Nr: int
+            Nx: int
+            Nd: int
         
         RETURNS
          DL: the delta loss for source idx!
@@ -380,7 +528,7 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         
         Data_src = Data[~np.isnan(Data[:,src]), src]
         
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         def W_aj(Y, a):
             """
             ?
@@ -417,15 +565,15 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         if not Data_src.shape==(0,):
 
             z1 = sample_predict_dens(Data_src, N=Nd, MUSIG0_L=MUSIG0_L, MU_L=MU_L, SIG_L=SIG_L)
-            Sample_I = Sample[:, src+1]
-            Sample_XA = Sample
+            Sample_I = XA_grid[:, src+1]
+            Sample_XA = XA_grid
             W_D = W_aj(Y=Data_src, a=Sample_I)
             dj = np.c_[Data_src*Nd, z1]
         else:
     
             z1 = np.random.random(Nd)*100
-            Sample_I = Sample[:, src+1]
-            Sample_XA = Sample
+            Sample_I = XA_grid[:, src+1]
+            Sample_XA = XA_grid
             W_D = np.array([list(np.repeat([1.0/100], Nx*Nr))])
             dj = np.vstack(z1) 
 
@@ -447,95 +595,6 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         DL = np.mean(max_IU_D1 - IU_D)
 
         return DL
-    
-
-    def KG_Mc_Input(XA, model, A1_samples, A2_samples, Nx=15, Ns=20):
-        """Takes a GPy model, constructs and optimzes KG and 
-        returns the best xa and best KG value.
-        
-        ARGS
-            XA: N*d matrix of observed locations, points
-            model: gpy model
-            Nx: int, numebr of KG discretization points.
-            Ns: number of random starts for the optimizer
-        
-        RETURNS
-            bestxa: the optimal xa for simulating
-            bestEVI: the output of the simulation
-         """
-
-        assert len(A1_samples)==len(A2_samples); "code assumes same number of both A1 and A2 samples"
-
-        # optimizer initial optim
-        KG_Mc_Input.bestEVI = -10
-        KG_Mc_Input.bestxa  = [-10,-10,-10]
-
-        noiseVar = model.Gaussian_noise.variance[0] 
-
-        # The past oberserved X values.
-        Xd = np.array(XA[:,0]).reshape(-1,1)
-        len_Xd = Xd.shape[0]
-
-        # The given sampled A1 and A2 values
-        Ad     = np.c_[A1_samples, A2_samples] #1000
-        len_Ad = Ad.shape[0]
-
-        # The matrix of discretized points.
-        XdAd   = np.c_[np.repeat(Xd, len_Ad), 
-                       rep_concat(A1_samples, len_Xd), 
-                       rep_concat(A2_samples, len_Xd)]
-
-        # Precompute the posterior mean added integrated over A1, A2 samples.
-        MM0 = np.sum(model.predict(XdAd)[0].reshape(len_Xd,len_Ad), axis=1)
-        MM0 = MM0.reshape(1,-1)
-
-        # Precompute cholesky decomposition.
-        K = model.kern.K(model.X, model.X)
-        chol_K = np.linalg.cholesky(K + (0.1**2.0)*np.eye(K.shape[0]))
-
-        def KG_IU(xa):
-            xa = np.array(xa).reshape((1, -1))
-
-            if np.any(xa>100) or np.any(xa<0):# (np.abs(xa[0]-50)>50 or np.abs(xa[1]-50)>50 or np.abs(xa[2]-50)>50):
-                return(1000000)
-            else:
-                # The current x with all the A samples
-                newx = np.c_[xa[0,0]*np.ones((len_Ad, 1)), Ad]
-
-                # The mean of new x integrated over A samples
-                MMx  = np.sum(model.predict(newx)[0])
-
-                # print(MMx); sys.exit()
-                MM   = np.c_[MMx, MM0].reshape(-1)
-                MM   = MM*(1/len_Ad)
-
-                # The average warping integrated over A1, A2 for XdAd
-                sigt_d = np.array(COV(model, xa, XdAd, chol_K))
-                sigt_d = sigt_d.reshape(len_Xd, len_Ad)
-                sigt_d = np.squeeze(np.sum(sigt_d, axis=1))
-                
-                # average warping for newx
-                sigt_x = np.sum(COV(model, xa, newx, chol_K)).reshape((-1,))
-
-                # variance of new observation
-                var_xa = VAR(model, xa, chol_K) + noiseVar
-                inv_SD_xa = 1/np.sqrt(var_xa).reshape(())
-
-                # put the peices together!
-                SIGT  = np.hstack([sigt_x, sigt_d])* inv_SD_xa
-                SIGT  = SIGT * (1/len_Ad)
-
-                # Finally compute KG!
-                out  = KG(MM, SIGT)
-                if out > KG_Mc_Input.bestEVI:
-                    KG_Mc_Input.bestEVI = out
-                    KG_Mc_Input.bestxa = xa
-                return -out
-
-        XAs  = lhs(3, Ns)*100
-        A    = [minimize(KG_IU, i, method='nelder-mead', options={'maxiter': 80}) for i in XAs]
-        
-        return KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI
 
 
     #=============================================================================================
@@ -551,7 +610,7 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
     Data =  np.zeros((0, 2))
     Ndata = np.sum(~np.isnan(Data))
 
-    print("Initialization complete", XA.shape[0] +  Ndata, "\n")
+    print("Initialization complete, budget used: ", XA.shape[0] +  Ndata, "\n")
 
     while XA.shape[0] +  Ndata < Budget:
        
@@ -571,19 +630,28 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
             A1_samples = np.random.random(Nr)*100
             A2_samples = np.random.random(Nr)*100
 
-        Sample = np.c_[np.repeat(x, Nr), 
-                       rep_concat(A1_samples, Nx),
-                       rep_concat(A2_samples, Nx)]
+        # import pdb; pdb.set_trace()
 
-        IU = np.mean(GPmodel.predict(Sample)[0].reshape(Nx, Nr), axis=1)
+        A1_samples = A1_samples.reshape(-1, 1)
+        A2_samples = A2_samples.reshape(-1, 1)
+        Xd  = x.reshape(-1,1)
+
+        XA_grid = np.c_[np.repeat(Xd, Nr, axis=0), 
+                        np.tile(A1_samples, (Nx,1)),
+                        np.tile(A2_samples, (Nx,1))]
+
+        A_grid = np.c_[A1_samples, A2_samples]
+        X_grid = XA[:, 0].reshape(-1, 1)
+
+        IU = np.mean(GPmodel.predict(XA_grid)[0].reshape(Nx, Nr), axis=1)
         Xr = x[np.argmax(IU)]
 
 
         # Get KG of both simulation and Input uncertainty.
-        topxa, topKG = KG_Mc_Input(XA, GPmodel, A1_samples, A2_samples, Nx=Nx, Ns=20)
+        topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub, Ns=20)
         
-        DL = np.array([Delta_Loss(Data, i, GPmodel, Xr, Sample) for i in range(dim)])
-        topis, topDL = np.argmax(DL), np.max(DL)
+        DL = np.array([Delta_Loss(GPmodel, Data, src, Xr, XA_grid) for src in range(dim)])
+        topsrc, topDL = np.argmax(DL), np.max(DL)
         
         if topKG > topDL:
             # if simulation is better
@@ -595,14 +663,9 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
         
         else:
             # if info source is better
-            print("Best is info source: ", topis, topDL)
+            print("Best is info source: ", topsrc, topDL)
             new_d = np.array([ [np.nan]*dim ])
-<<<<<<< HEAD
-            new_d[0, is] = inf_src(topis)
-
-=======
-            new_d[0, topis] = inf_src(s=1, src=topis)
->>>>>>> 935a2f8bd4030e38226a85f4005884146c69c112
+            new_d[0, topsrc] = inf_src(s=1, src=topsrc)
             Data = np.vstack([Data, new_d])
         
         print(" ")
@@ -614,10 +677,10 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
 if __name__=="__main__":
 
     
-    # print("Calling Test Function")
+    # print("Calling Test Function":wq
     xa = np.random.uniform(size=(10, 3))*100
     # print(xa)
-    dead = toy_test_func(xa, NoiseSD=0.)
+    dead = toy_func(xa, NoiseSD=0.)
 
 
     # print("\nCalling info source")
@@ -628,10 +691,12 @@ if __name__=="__main__":
     
 
     print("\nCalling optimizer")
-    X, Y, Data = Mult_Input_Uncert(test_func=toy_test_func,
-                                   lb=toy_test_func.lb,
-                                   ub=toy_test_func.ub,
+    X, Y, Data = Mult_Input_Uncert(test_func=toy_func,
+                                   lb=toy_func.lb,
+                                   ub=toy_func.ub,
                                    IU_dims=[1,2],
-                                   inf_src=toy_inf_src)
+                                   inf_src=toy_infsrc)
+    
+    
     
     
