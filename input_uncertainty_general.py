@@ -201,7 +201,7 @@ def toy_inf_src(s, n=2, gen_seed=11, gen=False):
         toy_inf_src.n_sources = n
 
     rn = np.random.multivariate_normal(toy_inf_src.f_mean, toy_inf_src.f_cov, s)
-    
+
     return rn[:,s],reshape(-1)
 
 
@@ -574,6 +574,7 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
             # if simulation is better
             print("Best is simulator: ", topxa, topKG)
             new_y = test_func(topxa)
+
             XA = np.vstack([XA, topxa])
             Y = np.concatenate([Y, new_y])
         
@@ -582,8 +583,8 @@ def Mult_Input_Uncert(test_func, lb, ub, IU_dims, inf_src,
             print("Best is info source: ", topis, topDL)
             new_d = np.array([ [np.nan]*dim ])
             new_d[0, is] = inf_src(topis)
+
             Data = np.vstack([Data, new_d])
-            Ndata = np.sum(~np.isnan(Data))
         
         print(" ")
 
