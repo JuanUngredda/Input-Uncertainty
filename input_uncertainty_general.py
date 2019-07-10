@@ -248,7 +248,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
         ARGS
             model: GPy model
             Xd: Nx*x_dim matrix discretizing X
-            Ad: Na*a_dim matrix discretizing A
+            Ad: Na*a_dim matrix discretizing A !!!MUST BE SAMPLES FROM POSTERIOR OVER A!!!!!
             lb: lower bounds on (x,a)
             ub: upper bounds on (x,a)
             Ns: number of START points, initial random search of KG
@@ -356,7 +356,7 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
         model: GPy model
         Data: list of arrays of inf_source observations
         Xd: Nx*x_dim matrix discretizing X
-        Ad: Na*a_dim matrix discretizing A
+        Ad: Na*a_dim matrix discretizing A !!!MUST BE SAMPLES FROM POSTERIOR OVER A!!!!!
         Wd: vector of weights, the probability densities that produced Ad!
         Nd: sample size for Delta loss evaluation
         distribution: string, which IU distribution to use.
@@ -389,10 +389,7 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
     cur_post_A_dens, _, cur_Data_sampler = post_maker(Data)
 
     # get the index of the current top recomended x value.
-    # The average is weighted to current posterior of A.
-    Wc = cur_post_A_dens(Ad)
-    Wc = Wc * invWd
-    M_X = np.sum(M_XA*Wc, axis=1)
+    M_X = np.mean(M_XA, axis=1)
     cur_topX_index = np.argmax(M_X)
 
     # loop over IU parameters / A dims / inf sources.
@@ -403,9 +400,9 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
         DL_src=[]
         for i in range(Nd):
             # sample a new observation and add it to the original Data
-            new_Data_i = cur_Data_sampler(1)[src]
+            tmp_Data_i = cur_Data_sampler(n=1)[src]
             tmp_Data = Data
-            tmp_Data[src] = np.concatenate([tmp_Data[src], new_Data_i])
+            tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
 
             # get the importance weights of the Ad points from new posterior
             tmp_post_A_dens, _, _ = post_maker(tmp_Data)
@@ -415,6 +412,8 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
             # now we have weights, get the peak of reweighted GP means
             M_X_i = np.sum(M_XA*Wi, axis=1)
             DL_i = np.max(M_X_i) - M_X_i[cur_topX_index]
+
+            # keep this single MC sample of DL improvement
             DL_src.append(DL_i)
         
         # get the average over DL samples for this source and save in the list.
@@ -422,7 +421,7 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
 
     # get the best source and its DL.
     topsrc = np.argmax(DL)
-    topDL  = np.max(DL) 
+    topDL  = np.max(DL) #- np.max(M_X)
 
     return topsrc, topDL
 
@@ -702,8 +701,11 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
         # Fit model to simulation data.
         GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
 
-        # Discretize X by lhs and discretize A with posterior samples.
+        # Discretize X by lhs and discretize A with posterior samples as required.
         X_grid = X_sampler(Nx)
+
+        # KG+DL take a standard unweighted average over A_grid, i.e. A_grid must 
+        # be samples from posterior over A! Don't use linspace!
         A_density, A_sampler, _ = post_maker(Data)
         A_grid = A_sampler(Na)
         W_A = A_density(A_grid)
