@@ -81,19 +81,19 @@ def toy_infsrc(n, src, n_srcs=2, gen_seed=11, gen=False):
     ub = 85
     lb = 15
     
-    if gen or not hasattr(toy_inf_src, "f_mean"):
+    if gen or not hasattr(toy_infsrc, "f_mean"):
         print("Generating params for " + str(n_srcs) + " info sources")
 
         np.random.seed(gen_seed)
         var = np.random.random(n_srcs)*(20-5)+5
-        toy_inf_src.f_mean = np.random.random(n_srcs)*(ub-lb)+lb
-        toy_inf_src.f_cov = np.multiply(np.identity(n_srcs), var)
-        toy_inf_src.n_srcs = n_srcs
+        toy_infsrc.f_mean = np.random.random(n_srcs)*(ub-lb)+lb
+        toy_infsrc.f_cov = np.multiply(np.identity(n_srcs), var)
+        toy_infsrc.n_srcs = n_srcs
 
-    assert src < toy_inf_src.n_srcs; "info source out of range"
+    assert src < toy_infsrc.n_srcs; "info source out of range"
     # import pdb; pdb.set_trace()
-    rn = np.random.normal(loc=toy_inf_src.f_mean[src], 
-                          scale=toy_inf_src.f_cov[src, src], 
+    rn = np.random.normal(loc=toy_infsrc.f_mean[src], 
+                          scale=toy_infsrc.f_cov[src, src], 
                           size=n)
     
     return rn.reshape(-1)
@@ -462,8 +462,6 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
     and likelihood combination we can be bothered to code in, delta loss will just work with any of them.
     """
 
-    # return bestsrc, bestDL
-
 
 # Distributions for the Input uncertainty. These three post_makers functions
 # go from observed Data -> A_density, A_sampler, Data_sampler
@@ -485,7 +483,7 @@ def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
     # eg assert len lb = len ub = cols Data, Data is a matrix, noisevar is a scalar
 
     dim_a = Data.shape[1]
-    uniform_dens = np.exp(-np.sum(np.log(ub-lb)))
+    uniform_dens = np.exp(-1*np.sum(np.log(ub-lb)))
     i_var = -0.5/noisevar
     log_norm_const = np.log( 1/(2*np.pi*np.sqrt(noisevar)) )
 
@@ -542,7 +540,7 @@ def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
         assert a.shape[1]==dim_a; "a have dim_a columns"
         a_dims = range(dim_a)
         a_rows = range(a.shape[0])
-        LH = [[Gauss_lhood_1D(a[j,i], Data[i]) for i in a_dims] for j in a_rows]
+        LH = [[log_Gauss_lhood_1D(a[j,i], Data[i]) for i in a_dims] for j in a_rows]
         LH = np.sum(np.array(LH), axis=1)
         return(LH)
 
@@ -559,8 +557,7 @@ def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
         assert a.shape[1]==lb.shape[0]; "a must be same dim as lb"
 
         # TODO: matrix input -> vector output
-        lhoods = [log_Gauss_likelihood(a, di) for di in Data]
-        log_post = log_uniform_prior(a) + np.sum(lhoods)
+        log_post = log_uniform_prior(a) + log_Gauss_lhood(a)
         density = np.exp(log_post)
         return(density)
     
@@ -570,6 +567,7 @@ def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
         """
         # sample poitns from current posterior over a truncated normal
         # TODO: implelemnt!
+        return(0)
         
     def post_Data_sampler(n):
         """
@@ -578,7 +576,7 @@ def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
         np.random.normal(scale=np.sqrt(noisevar), size=n) to get new fake "Data".
         """
         # TODO: get truncated normal samples from the posterior
-        post_a_samples = post_A_Sampler(n)
+        post_a_samples = post_A_sampler(n)
         Data_samples = post_a_samples + np.random.normal(size=n, scale=np.sqrt(noisevar))
         return(Data_samples)
     
@@ -806,7 +804,7 @@ def Fit_Inputs(Y, MUSIG0, MU, SIG):
     sum_sq = np.sum( (np.matrix(MUSIG0[:,0]).T  - Y)**2.0, axis=1)
     norm_const = 1.0/np.sqrt(2*np.pi*MUSIG0[:,1])**len(Y)
 
-    L = norm_const * np.exp( - sum_sq * inv_var )
+    L = norm_const * np.exp( 1- sum_sq * inv_var )
 
     L = L.reshape(len(MU),len(SIG))
     dmu = MU[1]-MU[0]
