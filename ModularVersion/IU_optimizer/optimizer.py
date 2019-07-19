@@ -8,14 +8,8 @@ import pygmo as pg
 from scipy.stats import uniform
 from pyDOE import lhs
 from scipy import optimize
-import pandas as pd
+from scipy.optimize import minimize
 
-import scipy.integrate as integrate
-import scipy.special as special
-
-import time
-from scipy.stats import truncnorm
-from scipy.interpolate import interp1d
 
 class Mult_Input_Uncert():
 

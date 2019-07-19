@@ -1,21 +1,107 @@
 import GPy
 import numpy as np
+import itertools
 from pyDOE import lhs
 from scipy.optimize import minimize
 from scipy.stats import uniform, truncnorm, norm
-
+import matplotlib.pyplot as plt
 
 # Toy test function and info source.
+
+class testfunction(object):
+    def __init__(self):
+        self.xmin = None
+        self.xmax = None
+        self.dx = None
+
+    def __call__(self, x):
+        raise ValueError("Function not defined")
+
+    def get_range(self):
+        return np.array([self.xmin, self.xmax])
+
+    def check_input(self, x):
+        if not x.shape[1] == self.dxa or any(x.reshape((-1)) > self.xmax) or any(x.reshape((-1)) < self.xmin):
+            raise ValueError("x is wrong dim or out of bounds")
+        return x
+
+    def RandomCall(self):
+        x = np.random.uniform(self.xmin, self.xmax)
+        f = self.__call__(x)
+        # f = self.testmode(x)
+        print("\n\nFunction: {}".format(type(self).__name__))
+        print("Input = {}".format(x))
+        print("Output = {}".format(f))
+
+    def testmode(self, x):
+        return self.__call__(x, noise_std=0)
+
+
+class GP_test(testfunction):
+    """
+A toy function GP
+
+ARGS
+ min: scalar defining min range of inputs
+ max: scalar defining max range of inputs
+ seed: int, RNG seed
+ x_dim: designs dimension
+ a_dim: input dimensions
+ xa: n*d matrix, points in space to eval testfun
+ NoiseSD: additive gaussaint noise SD
+
+RETURNS
+ output: vector of length nrow(xa)
+ """
+
+    def __init__(self, xamin, xamax, seed=11, x_dim=2, a_dim=1):
+        self.seed = seed
+        self.dx = x_dim
+        self.da = a_dim
+        self.dxa = x_dim + a_dim
+        self.xmin = xamin
+        self.xmax = xamax
+        self.KERNEL = GPy.kern.RBF(input_dim=self.dxa, variance=10000., lengthscale=([10] * self.dxa), ARD=True)
+        self.generate_function()
+
+    def __call__(self, xa, noise_std=1):
+        assert len(xa.shape) == 2, "xa must be an N*d matrix, each row a d point"
+        assert xa.shape[1] == self.dxa, "Test_func: wrong dimension inputed"
+
+        xa = self.check_input(xa)
+
+        ks = self.KERNEL.K(xa, self.XF)
+        out = np.dot(ks, self.invCZ)
+
+        E = np.random.normal(0, noise_std, xa.shape[0])
+
+        return (out.reshape(-1, 1) + E.reshape(-1, 1))
+
+    def generate_function(self):
+        print("Generating test function")
+        np.random.seed(self.seed)
+
+        self.XF = np.random.uniform(size=(50, self.dxa)) * (self.xmax - self.xmin) + self.xmin
+
+        mu = np.zeros(self.XF.shape[0])
+
+        C = self.KERNEL.K(self.XF, self.XF)
+
+        Z = np.random.multivariate_normal(mu, C).reshape(-1, 1)
+        invC = np.linalg.inv(C + np.eye(C.shape[0]) * 1e-3)
+
+        self.invCZ = np.dot(invC, Z)
+
 def toy_func(xa, NoiseSD=np.sqrt(1), gen_seed=11, gen=False):
     """
     A toy function (and generator if necessary upon first call), GP
-    
+
     ARGS
      xa: n*d matrix, points in space to eval testfun
      NoiseSD: additive gaussaint noise SD
      seed: int, RNG seed
      gen: boolean, create new test function?
-    
+
     RETURNS
      output: vector of length nrow(xa)
      """
@@ -23,10 +109,10 @@ def toy_func(xa, NoiseSD=np.sqrt(1), gen_seed=11, gen=False):
     if len(xa.shape)==1 and xa.shape[0]==3: xa = xa.reshape((1,3))
     assert len(xa.shape)==2; "xa must be an N*3 matrix"
     assert xa.shape[1]==3; "xa must be 3d"
-     
-    
+
+
     KERNEL = GPy.kern.RBF(input_dim=3, variance=10000., lengthscale=([10,10,10]), ARD = True)
-    
+
     if gen or not hasattr(toy_func, "invCZ"):
         # If the test function has not been generated then generate it.
 
@@ -66,21 +152,21 @@ def toy_infsrc(n, src, n_srcs=2, gen_seed=11, gen=False):
     """
     A Toy info source generator!
     An mv norm sampler with randomly set params.
-    
+
     ARGS
         n: number of samples
         src: which source to use
         n_srcs: int, number of source to generate when initiliazing
         gen_seed: int, rng seed for generated initilization
         gen: boolean, regenerate mvnrom params
-    
+
     RETURNS
         rn: vector of info source samples.
     """
-    
+
     ub = 85
     lb = 15
-    
+
     if gen or not hasattr(toy_infsrc, "f_mean"):
         print("Generating params for " + str(n_srcs) + " info sources")
 
@@ -92,10 +178,10 @@ def toy_infsrc(n, src, n_srcs=2, gen_seed=11, gen=False):
 
     assert src < toy_infsrc.n_srcs; "info source out of range"
     # import pdb; pdb.set_trace()
-    rn = np.random.normal(loc=toy_infsrc.f_mean[src], 
-                          scale=toy_infsrc.f_cov[src, src], 
+    rn = np.random.normal(loc=toy_infsrc.f_mean[src],
+                          scale=toy_infsrc.f_cov[src, src],
                           size=n)
-    
+
     return rn.reshape(-1)
 
 
@@ -107,9 +193,9 @@ def lhs_box(n, lb, ub):
         n: number of points
         lb: vector, lower bounds of each dim
         ub: vector, upper bounds of each dim
-    
+
     RETURNS
-        LL: an lhs in the box, lb < x < ub 
+        LL: an lhs in the box, lb < x < ub
     """
 
     lb = lb.reshape(-1)
@@ -857,264 +943,269 @@ def sample_predict_dens(Data, N, MUSIG0_L, MU_L, SIG_L):
         return zn
 
 
-def old_Mult_Input_Uncert(sim_fun, lb, ub, IU_dims, inf_src,
-                      distribution="trunc_norm",
-                      n_fun_init=10, 
-                      n_inf_init=0, 
-                      Budget=100,
-                      Nx=101,
-                      Na=102, 
-                      Nr=103):
-
-    """
-    Optimizes the test function integrated over IU_dims. The integral
-    is also changing over time and learnt.
-
-    ARGS
-        sim_fun: callable simulator function, input (x,a), returns scalar
-        lb: lower bounds on (x,a) vector input to test_fun
-        ub: upper bounds on (x,a) vector input to test_fun
-        IU_dims: int, list of dims of (x,a) that are 'a' (eg 2nd and 3rd dim [1,2])
-        inf_src: callable function returning info source data
-        distribution: which prior/posterior to use for the uncertain parameters
-        n_fun_init: number of inital points for GP model
-        n_inf_init: number of intial points for info source
-        Budget: total budget of calls to test_fun and inf_src
-        Nx: int, discretization size of X
-        Na: int, discretization size of A
-        Nr: int, discretization size of ?
-
-    RETURNS
-        X: observed test_func inputs
-        Y: observed test_func outputs
-        Data: list of array of inf_src observations
-        rec_X: the recomended X values
-    """
-
-    IU_dims = np.array(IU_dims)
-
-    lb = lb.reshape(-1)
-    ub = ub.reshape(-1)
-
-    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
-    assert np.all(lb<=ub); "lower must be below upper!"
-
-    assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
-    assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
-    assert np.all(IU_dims>=0); "IU_dims too low!"
-
-    # TODO: implement lb and ub, currently 0,100 is hardcoded.
-    # TODO: implelemt arbitrary dimensions of x, a, currently dim_x=1, dim_a=2 is hardcoded.
-    # TODO: rename application specific variables "MU_L", "SIG_L", "MUSIG0" etc to generalised "A".
-    # TODO: use IU_dims, The optimizer needs to know which dims of sim_fun are X and which are A
-    # TODO: restructure 'Data' to be a list of arrays rather than a matrix of nan/floats?
-
-    # TODO: generalize dimension and bounds
-    x = np.linspace(0, 100, Nx) #vector of input variable
-    dim = len(IU_dims)
-
-    # Make lattice over IU parameter space.
-    # TODO: generalise to arbitrary A dims/info sources
-    # TODO: refresh the lattice every iteration?
-    MU = np.linspace(0, 100, Na)
-    SIG = np.linspace(0.025, 100, Na)
-    rep_MU = np.repeat(MU, Na)
-    rep_SIG = np.tile(SIG, Na)
-    MUSIG0 = np.c_[rep_MU, rep_SIG]
-    
-    MU_L  = np.linspace(0,100,101)
-    SIG_L = np.linspace(0.025,100,101)
-
-    X_L   = np.repeat(MU_L, 101)
-    W_L   = np.tile(SIG_L, 101)
-    MUSIG0_L = np.c_[X_L, W_L]
-
-    # TODO: make this function standalone, callable from outside of Multi_Inpur_Uncert, just like KG_Mc_Input
-    # TODO: make this function IU distribution agnostic as described below trunc_norm_post function
-    def Delta_Loss(model, Data, src, Xr, XdAd, Nr=102, Nx=101, Nd=100):
-        # return(-100000000)
-        """
-        Compute the improvement due to querying an info source.
-        
-        ARGS
-            model: GPy model
-            Data: n*Ns matrix, info source observations
-            src: which info source to compute DL for.
-            Xr: recomended X value with current data
-            XdAd: discretization over X x A
-            Nr: int
-            Nx: int
-            Nd: int
-        
-        RETURNS
-            DL: the delta loss for source idx!
-        """
-        
-        Data_src = Data[~np.isnan(Data[:,src]), src]
-        
-        # import pdb; pdb.set_trace()
-        def W_aj(Y, a):
-            """
-            ?
-            ARGS
-                Y: array
-                a: unused?
-            
-            RETURNS
-                marg_ma_val: float
-            """
-            MU = np.linspace(0,100, 60)
-            SIG = np.linspace(0.25, 100, 60)
-            d = np.vstack(np.hstack(Y))
-            N = Y.shape[1]
-            dimY = Y.shape[0]
-
-            # TODO: split up into multiple lines
-            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-MU)**2,dimY,axis=0),axis=1)))
-            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-            L = np.split(expo*consts, dimY, axis=1)
-            marg_mu_dist = np.sum(L,axis=1)*(SIG[1]-SIG[0])
-
-            C = np.sum(marg_mu_dist,axis=1)*(MU[1]-MU[0])
-            marg_mu_dist = marg_mu_dist*(1/np.vstack(C))
-
-            # TODO: split up into multiple lines
-            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-a)**2,dimY,axis=0),axis=1)))
-            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-            L = np.split(expo*consts, dimY, axis=1)
-            marg_mu_val = np.sum(L,axis=1)*(SIG[1]-SIG[0])*(1/np.vstack(C))
-
-            return marg_mu_val
-        
-        Xr = Xr.reshape((1,-1))
-        dim_X = Xr.shape[1]
-
-        # We need two functions, a posterior density and a posterior sampler.
-        # TODO: merge both of these cases into one: sample_predict_dens also handles prior.
-        if not Data_src.shape[0]==0:
-            # If we have data, sample from posterior
-            # TODO: replace MU, MUSIG etc with Ad as appropriate, generalise A dimension
-            z1 = sample_predict_dens(Data_src, N=Nd, MUSIG0_L=MUSIG0_L, MU_L=MU_L, SIG_L=SIG_L)
-            Ad = XdAd[:, src+dim_X]
-            W_D = W_aj(Y=Data_src, a=Ad)
-            dj = np.c_[Data_src*Nd, z1]
-
-        else:
-            # If we have no data, sample from prior
-            z1 = np.random.random(Nd)*100
-            Ad = XdAd[:, src+dim+X]
-            # TODO: generalize bound
-            W_D = np.array([list(np.repeat([1.0/100], Nx*Nr))])
-            dj = np.vstack(z1) 
-
-        W_D1 = W_aj(Y=dj, a=Ad)
-
-        Wi = W_D1/W_D
-        Wi = Wi.reshape(Nd, Nx, Nr)
-        
-        M_XdAd = model.predict(XdAd)[0].reshape(Nx, Nr)
-
-        IU_D1 = np.mean(np.multiply(Wi, M_XdAd), axis=2)
-        max_IU_D1 = np.max(IU_D1, axis=1)
-
-        # TODO: generalise dimension change 1:3 to dim_X:(dim_X+dim_A)
-        M_Xr = model.predict(np.array(np.c_[np.repeat(Xr, Nr), XdAd[:Nr,1:3]]))[0].T
-     
-
-        IU_D = np.mean(np.mean(np.multiply(Wi, M_Xr), axis=2), axis=1)
-        DL = np.mean(max_IU_D1 - IU_D)
-
-        return DL
-
-
-    #=============================================================================================
-    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    #=============================================================================================
-    
-    # Initilize GP model
-    XA = lhs(3, n_fun_init)*100
-    Y  = sim_fun(xa=XA)
-    ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD=True)
-
-    # Initilize input uncertainty model
-    Data =  np.zeros((0, 2))
-    Ndata = np.sum(~np.isnan(Data))
-
-    print("Initialization complete, budget used: ", XA.shape[0] +  Ndata, "\n")
-
-    while XA.shape[0] +  Ndata < Budget:
-       
-        Ndata = np.sum(~np.isnan(Data))
-        print("Iteration ", XA.shape[0]+Ndata+1, ":")
-
-        # Fit model to simulation data.
-        GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
-
-        # Fit model to IU data and generate samples for KG MC integral.
-        # TODO: generalise to arbitrary IU variables
-        if Ndata > 0:
-            _, A1_pdf = Fit_Inputs(Data[:,0], MUSIG0, MU, SIG)
-            _, A2_pdf = Fit_Inputs(Data[:,1], MUSIG0, MU, SIG)
-            A1_samples = Gen_Sample(A1_pdf, Nr)
-            A2_samples = Gen_Sample(A2_pdf, Nr)
-        else:
-            A1_samples = np.random.random(Nr)*100
-            A2_samples = np.random.random(Nr)*100
-
-        # import pdb; pdb.set_trace()
-
-        A1_samples = A1_samples.reshape(-1, 1)
-        A2_samples = A2_samples.reshape(-1, 1)
-        Xd  = x.reshape(-1,1)
-
-        XA_grid = np.c_[np.repeat(Xd, Nr, axis=0), 
-                        np.tile(A1_samples, (Nx,1)),
-                        np.tile(A2_samples, (Nx,1))]
-
-        A_grid = np.c_[A1_samples, A2_samples]
-        X_grid = XA[:, 0].reshape(-1, 1)
-
-        IU = np.mean(GPmodel.predict(XA_grid)[0].reshape(Nx, Nr), axis=1)
-        Xr = x[np.argmax(IU)]
-
-
-        # Get KG of both simulation and Input uncertainty.
-        topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
-        
-        DL = np.array([Delta_Loss(GPmodel, Data, src, Xr, XA_grid) for src in range(inf_src.n_srcs)])
-        topsrc, topDL = np.argmax(DL), np.max(DL)
-        
-        if topKG > topDL:
-            # if simulation is better
-            print("Best is simulator: ", topxa, topKG)
-            new_y = sim_fun(topxa)
-
-            XA = np.vstack([XA, topxa])
-            Y = np.concatenate([Y, new_y])
-        
-        else:
-            # if info source is better
-            print("Best is info source: ", topsrc, topDL)
-            new_d = np.array([ [np.nan]*dim ])
-            new_d[0, topsrc] = inf_src(s=1, src=topsrc)
-            Data = np.vstack([Data, new_d])
-        
-        print(" ")
-
-    return XA, Y, Data#, rec_X 
-
-
-
+# def old_Mult_Input_Uncert(sim_fun, lb, ub, IU_dims, inf_src,
+#                       distribution="trunc_norm",
+#                       n_fun_init=10,
+#                       n_inf_init=0,
+#                       Budget=100,
+#                       Nx=101,
+#                       Na=102,
+#                       Nr=103):
+#
+#     """
+#     Optimizes the test function integrated over IU_dims. The integral
+#     is also changing over time and learnt.
+#
+#     ARGS
+#         sim_fun: callable simulator function, input (x,a), returns scalar
+#         lb: lower bounds on (x,a) vector input to test_fun
+#         ub: upper bounds on (x,a) vector input to test_fun
+#         IU_dims: int, list of dims of (x,a) that are 'a' (eg 2nd and 3rd dim [1,2])
+#         inf_src: callable function returning info source data
+#         distribution: which prior/posterior to use for the uncertain parameters
+#         n_fun_init: number of inital points for GP model
+#         n_inf_init: number of intial points for info source
+#         Budget: total budget of calls to test_fun and inf_src
+#         Nx: int, discretization size of X
+#         Na: int, discretization size of A
+#         Nr: int, discretization size of ?
+#
+#     RETURNS
+#         X: observed test_func inputs
+#         Y: observed test_func outputs
+#         Data: list of array of inf_src observations
+#         rec_X: the recomended X values
+#     """
+#
+#     IU_dims = np.array(IU_dims)
+#
+#     lb = lb.reshape(-1)
+#     ub = ub.reshape(-1)
+#
+#     assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
+#     assert np.all(lb<=ub); "lower must be below upper!"
+#
+#     assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
+#     assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
+#     assert np.all(IU_dims>=0); "IU_dims too low!"
+#
+#     # TODO: implement lb and ub, currently 0,100 is hardcoded.
+#     # TODO: implelemt arbitrary dimensions of x, a, currently dim_x=1, dim_a=2 is hardcoded.
+#     # TODO: rename application specific variables "MU_L", "SIG_L", "MUSIG0" etc to generalised "A".
+#     # TODO: use IU_dims, The optimizer needs to know which dims of sim_fun are X and which are A
+#     # TODO: restructure 'Data' to be a list of arrays rather than a matrix of nan/floats?
+#
+#     # TODO: generalize dimension and bounds
+#     x = np.linspace(0, 100, Nx) #vector of input variable
+#     dim = len(IU_dims)
+#
+#     # Make lattice over IU parameter space.
+#     # TODO: generalise to arbitrary A dims/info sources
+#     # TODO: refresh the lattice every iteration?
+#     MU = np.linspace(0, 100, Na)
+#     SIG = np.linspace(0.025, 100, Na)
+#     rep_MU = np.repeat(MU, Na)
+#     rep_SIG = np.tile(SIG, Na)
+#     MUSIG0 = np.c_[rep_MU, rep_SIG]
+#
+#     MU_L  = np.linspace(0,100,101)
+#     SIG_L = np.linspace(0.025,100,101)
+#
+#     X_L   = np.repeat(MU_L, 101)
+#     W_L   = np.tile(SIG_L, 101)
+#     MUSIG0_L = np.c_[X_L, W_L]
+#
+#     # TODO: make this function standalone, callable from outside of Multi_Inpur_Uncert, just like KG_Mc_Input
+#     # TODO: make this function IU distribution agnostic as described below trunc_norm_post function
+#     def Delta_Loss(model, Data, src, Xr, XdAd, Nr=102, Nx=101, Nd=100):
+#         # return(-100000000)
+#         """
+#         Compute the improvement due to querying an info source.
+#
+#         ARGS
+#             model: GPy model
+#             Data: n*Ns matrix, info source observations
+#             src: which info source to compute DL for.
+#             Xr: recomended X value with current data
+#             XdAd: discretization over X x A
+#             Nr: int
+#             Nx: int
+#             Nd: int
+#
+#         RETURNS
+#             DL: the delta loss for source idx!
+#         """
+#
+#         Data_src = Data[~np.isnan(Data[:,src]), src]
+#
+#         # import pdb; pdb.set_trace()
+#         def W_aj(Y, a):
+#             """
+#             ?
+#             ARGS
+#                 Y: array
+#                 a: unused?
+#
+#             RETURNS
+#                 marg_ma_val: float
+#             """
+#             MU = np.linspace(0,100, 60)
+#             SIG = np.linspace(0.25, 100, 60)
+#             d = np.vstack(np.hstack(Y))
+#             N = Y.shape[1]
+#             dimY = Y.shape[0]
+#
+#             # TODO: split up into multiple lines
+#             expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-MU)**2,dimY,axis=0),axis=1)))
+#             consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
+#             L = np.split(expo*consts, dimY, axis=1)
+#             marg_mu_dist = np.sum(L,axis=1)*(SIG[1]-SIG[0])
+#
+#             C = np.sum(marg_mu_dist,axis=1)*(MU[1]-MU[0])
+#             marg_mu_dist = marg_mu_dist*(1/np.vstack(C))
+#
+#             # TODO: split up into multiple lines
+#             expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-a)**2,dimY,axis=0),axis=1)))
+#             consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
+#             L = np.split(expo*consts, dimY, axis=1)
+#             marg_mu_val = np.sum(L,axis=1)*(SIG[1]-SIG[0])*(1/np.vstack(C))
+#
+#             return marg_mu_val
+#
+#         Xr = Xr.reshape((1,-1))
+#         dim_X = Xr.shape[1]
+#
+#         # We need two functions, a posterior density and a posterior sampler.
+#         # TODO: merge both of these cases into one: sample_predict_dens also handles prior.
+#         if not Data_src.shape[0]==0:
+#             # If we have data, sample from posterior
+#             # TODO: replace MU, MUSIG etc with Ad as appropriate, generalise A dimension
+#             z1 = sample_predict_dens(Data_src, N=Nd, MUSIG0_L=MUSIG0_L, MU_L=MU_L, SIG_L=SIG_L)
+#             Ad = XdAd[:, src+dim_X]
+#             W_D = W_aj(Y=Data_src, a=Ad)
+#             dj = np.c_[Data_src*Nd, z1]
+#
+#         else:
+#             # If we have no data, sample from prior
+#             z1 = np.random.random(Nd)*100
+#             Ad = XdAd[:, src+dim+X]
+#             # TODO: generalize bound
+#             W_D = np.array([list(np.repeat([1.0/100], Nx*Nr))])
+#             dj = np.vstack(z1)
+#
+#         W_D1 = W_aj(Y=dj, a=Ad)
+#
+#         Wi = W_D1/W_D
+#         Wi = Wi.reshape(Nd, Nx, Nr)
+#
+#         M_XdAd = model.predict(XdAd)[0].reshape(Nx, Nr)
+#
+#         IU_D1 = np.mean(np.multiply(Wi, M_XdAd), axis=2)
+#         max_IU_D1 = np.max(IU_D1, axis=1)
+#
+#         # TODO: generalise dimension change 1:3 to dim_X:(dim_X+dim_A)
+#         M_Xr = model.predict(np.array(np.c_[np.repeat(Xr, Nr), XdAd[:Nr,1:3]]))[0].T
+#
+#
+#         IU_D = np.mean(np.mean(np.multiply(Wi, M_Xr), axis=2), axis=1)
+#         DL = np.mean(max_IU_D1 - IU_D)
+#
+#         return DL
+#
+#
+#     #=============================================================================================
+#     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#     #=============================================================================================
+#
+#     # Initilize GP model
+#     XA = lhs(3, n_fun_init)*100
+#     Y  = sim_fun(xa=XA)
+#     ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD=True)
+#
+#     # Initilize input uncertainty model
+#     Data =  np.zeros((0, 2))
+#     Ndata = np.sum(~np.isnan(Data))
+#
+#     print("Initialization complete, budget used: ", XA.shape[0] +  Ndata, "\n")
+#
+#     while XA.shape[0] +  Ndata < Budget:
+#
+#         Ndata = np.sum(~np.isnan(Data))
+#         print("Iteration ", XA.shape[0]+Ndata+1, ":")
+#
+#         # Fit model to simulation data.
+#         GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
+#
+#         # Fit model to IU data and generate samples for KG MC integral.
+#         # TODO: generalise to arbitrary IU variables
+#         if Ndata > 0:
+#             _, A1_pdf = Fit_Inputs(Data[:,0], MUSIG0, MU, SIG)
+#             _, A2_pdf = Fit_Inputs(Data[:,1], MUSIG0, MU, SIG)
+#             A1_samples = Gen_Sample(A1_pdf, Nr)
+#             A2_samples = Gen_Sample(A2_pdf, Nr)
+#         else:
+#             A1_samples = np.random.random(Nr)*100
+#             A2_samples = np.random.random(Nr)*100
+#
+#         # import pdb; pdb.set_trace()
+#
+#         A1_samples = A1_samples.reshape(-1, 1)
+#         A2_samples = A2_samples.reshape(-1, 1)
+#         Xd  = x.reshape(-1,1)
+#
+#         XA_grid = np.c_[np.repeat(Xd, Nr, axis=0),
+#                         np.tile(A1_samples, (Nx,1)),
+#                         np.tile(A2_samples, (Nx,1))]
+#
+#         A_grid = np.c_[A1_samples, A2_samples]
+#         X_grid = XA[:, 0].reshape(-1, 1)
+#
+#         IU = np.mean(GPmodel.predict(XA_grid)[0].reshape(Nx, Nr), axis=1)
+#         Xr = x[np.argmax(IU)]
+#
+#
+#         # Get KG of both simulation and Input uncertainty.
+#         topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
+#
+#         DL = np.array([Delta_Loss(GPmodel, Data, src, Xr, XA_grid) for src in range(inf_src.n_srcs)])
+#         topsrc, topDL = np.argmax(DL), np.max(DL)
+#
+#         if topKG > topDL:
+#             # if simulation is better
+#             print("Best is simulator: ", topxa, topKG)
+#             new_y = sim_fun(topxa)
+#
+#             XA = np.vstack([XA, topxa])
+#             Y = np.concatenate([Y, new_y])
+#
+#         else:
+#             # if info source is better
+#             print("Best is info source: ", topsrc, topDL)
+#             new_d = np.array([ [np.nan]*dim ])
+#             new_d[0, topsrc] = inf_src(s=1, src=topsrc)
+#             Data = np.vstack([Data, new_d])
+#
+#         print(" ")
+#
+#     return XA, Y, Data#, rec_X
+#
+#
+#
 
 
 if __name__=="__main__":
 
-    
-    # print("Calling Test Function":wq
-    xa = np.random.uniform(size=(10, 3))*100
-    # print(xa)
-    dead = toy_func(xa, NoiseSD=0.)
 
+    # print("Calling Test Function":wq
+
+    xa = np.random.uniform(size=(10, 2))*100
+    print("xa")
+    print(xa)
+    f = GP_test( xamin = 0, xamax = 100, seed = 11, x_dim=1, a_dim = 1)
+
+    somelists= [np.linspace(0,100,50) for i in range(2)]
+    a = np.array([list(i) for i in itertools.product(*somelists)])
+    print(f(a))
 
     # print("\nCalling info source")
     # print("source 0")
@@ -1123,13 +1214,14 @@ if __name__=="__main__":
     # print(toy_inf_src(10, 1))
     
 
-    print("\nCalling optimizer")
-    X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
-                                   lb=toy_func.lb,
-                                   ub=toy_func.ub,
-                                   dim_X=1,
-                                   inf_src=toy_infsrc,
-                                   distribution="MUSIG")
+
+    #print("\nCalling optimizer")
+    # X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
+    #                                lb=toy_func.xmin,
+    #                                ub=toy_func.xmax,
+    #                                dim_X=1,
+    #                                inf_src=toy_infsrc,
+    #                                distribution="MUSIG")
     
     
 # This stuff goes into a new file problem_runner.py or jupyter notebook
@@ -1147,4 +1239,3 @@ if __name__=="__main__":
 #                            inf_src=patient_distro)
     
 # pickle.dump(output, open("mysavefile", ,".pkl", "wb"))
-

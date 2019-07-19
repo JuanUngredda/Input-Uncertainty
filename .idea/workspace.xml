@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="17aa51ba-4913-44a4-84ac-9133a6581942" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/input_uncertainty_general.py" beforeDir="false" afterPath="$PROJECT_DIR$/input_uncertainty_general.py" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/input_uncertainty_general.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="339">
+              <caret line="1205" lean-forward="true" selection-start-line="1205" selection-end-line="1205" />
+              <folding>
+                <element signature="e#0#10#0" expanded="true" />
+                <element signature="e#2586#4258#0" />
+                <element signature="e#3891#3950#0" />
+                <element signature="e#4323#5407#0" />
+                <element signature="e#4323#4727#1" />
+                <element signature="e#4819#5128#0" />
+                <element signature="e#2597#3099#0" />
+                <element signature="e#3701#5166#0" />
+                <element signature="e#5207#5862#0" />
+                <element signature="e#5886#6840#0" />
+                <element signature="e#5886#6268#1" />
+                <element signature="e#6918#10894#0" />
+                <element signature="e#11046#15609#0" />
+                <element signature="e#15612#15688#0" />
+                <element signature="e#15874#19829#0" />
+                <element signature="e#19901#20163#0" />
+                <element signature="e#20296#21370#0" />
+                <element signature="e#21755#25958#0" />
+                <element signature="e#25962#26088#0" />
+                <element signature="e#26468#26883#0" />
+                <element signature="e#26938#27707#0" />
+                <element signature="e#27775#28808#0" />
+                <element signature="e#31226#31288#0" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/TestProblems/synthetics.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="389">
+              <caret line="112" column="22" lean-forward="true" selection-start-line="112" selection-start-column="22" selection-end-line="112" selection-end-column="22" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>hasattr</find>
+      <find>toy_func</find>
+    </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" />
+        <option value="$PROJECT_DIR$/input_uncertainty_general.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectConfigurationFiles">
+    <option name="files">
+      <list>
+        <option value="$PROJECT_DIR$/.idea/Input-Uncertainty.iml" />
+        <option value="$PROJECT_DIR$/.idea/misc.xml" />
+        <option value="$PROJECT_DIR$/.idea/modules.xml" />
+        <option value="$PROJECT_DIR$/.idea/vcs.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="293" />
+    <option name="y" value="53" />
+    <option name="width" value="1400" />
+    <option name="height" value="1000" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="Input-Uncertainty" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Input-Uncertainty" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Input-Uncertainty" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Input-Uncertainty" type="462c0819:PsiDirectoryNode" />
+              <item name="ModularVersion" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Input-Uncertainty" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Input-Uncertainty" type="462c0819:PsiDirectoryNode" />
+              <item name="ModularVersion" type="462c0819:PsiDirectoryNode" />
+              <item name="IU_optimizer" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="Input-Uncertainty" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Input-Uncertainty" type="462c0819:PsiDirectoryNode" />
+              <item name="TestProblems" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager">
+    <configuration name="input_uncertainty_general" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Input-Uncertainty" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/input_uncertainty_general.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.input_uncertainty_general" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="17aa51ba-4913-44a4-84ac-9133a6581942" name="Default Changelist" comment="" />
+      <created>1563467719353</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1563467719353</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="67" y="25" width="1853" height="1055" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info id="Favorites" side_tool="true" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.18797815" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Version Control" weight="0.32937366" />
+      <window_info anchor="bottom" id="Python Console" weight="0.5399568" />
+      <window_info anchor="bottom" id="Terminal" weight="0.32937366" />
+      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.32937366" />
+      <window_info active="true" anchor="bottom" id="Debug" order="3" visible="true" weight="0.39956802" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32937366" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/ModularVersion/IU_optimizer/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-44">
+          <caret line="7" column="31" lean-forward="true" selection-start-line="7" selection-start-column="31" selection-end-line="7" selection-end-column="31" />
+          <folding>
+            <element signature="e#1250#5890#0" />
+            <element signature="e#6336#6611#0" />
+            <element signature="e#6654#6891#0" />
+            <element signature="e#6939#7761#0" />
+            <element signature="e#7802#10158#0" />
+            <element signature="e#10223#12562#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TestProblems/mlp.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="198">
+          <caret line="32" column="85" selection-start-line="32" selection-start-column="85" selection-end-line="32" selection-end-column="85" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TestProblems/space.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="198">
+          <caret line="402" column="10" selection-start-line="402" selection-start-column="10" selection-end-line="402" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TestProblems/synthetics.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="389">
+          <caret line="112" column="22" lean-forward="true" selection-start-line="112" selection-start-column="22" selection-end-line="112" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/input_uncertainty_general.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="339">
+          <caret line="1205" lean-forward="true" selection-start-line="1205" selection-end-line="1205" />
+          <folding>
+            <element signature="e#0#10#0" expanded="true" />
+            <element signature="e#2586#4258#0" />
+            <element signature="e#3891#3950#0" />
+            <element signature="e#4323#5407#0" />
+            <element signature="e#4323#4727#1" />
+            <element signature="e#4819#5128#0" />
+            <element signature="e#2597#3099#0" />
+            <element signature="e#3701#5166#0" />
+            <element signature="e#5207#5862#0" />
+            <element signature="e#5886#6840#0" />
+            <element signature="e#5886#6268#1" />
+            <element signature="e#6918#10894#0" />
+            <element signature="e#11046#15609#0" />
+            <element signature="e#15612#15688#0" />
+            <element signature="e#15874#19829#0" />
+            <element signature="e#19901#20163#0" />
+            <element signature="e#20296#21370#0" />
+            <element signature="e#21755#25958#0" />
+            <element signature="e#25962#26088#0" />
+            <element signature="e#26468#26883#0" />
+            <element signature="e#26938#27707#0" />
+            <element signature="e#27775#28808#0" />
+            <element signature="e#31226#31288#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
