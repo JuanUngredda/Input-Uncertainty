@@ -5,6 +5,7 @@ from pyDOE import lhs
 from scipy.optimize import minimize
 from scipy.stats import uniform, truncnorm, norm
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 # Toy test function and info source.
 
@@ -92,97 +93,30 @@ RETURNS
 
         self.invCZ = np.dot(invC, Z)
 
-def toy_func(xa, NoiseSD=np.sqrt(1), gen_seed=11, gen=False):
-    """
-    A toy function (and generator if necessary upon first call), GP
+class toy_infsrc():
 
-    ARGS
-     xa: n*d matrix, points in space to eval testfun
-     NoiseSD: additive gaussaint noise SD
-     seed: int, RNG seed
-     gen: boolean, create new test function?
+    def __init__(self,lb =25,ub=65,n_srcs =1 ,seed=11):
+        self.lb = lb
+        self.ub = ub
+        self.n_srcs = n_srcs
+        self.seed = seed
+        self.input_tags = range(n_srcs)
+        self.generate()
 
-    RETURNS
-     output: vector of length nrow(xa)
-     """
+    def __call__(self, n, src):
+        assert src in self.input_tags, "info source out of range"
+        rn = np.random.normal(loc=self.f_mean[src],
+                              scale=self.f_cov[src, src],
+                              size=n)
+        return rn.reshape(-1)
 
-    if len(xa.shape)==1 and xa.shape[0]==3: xa = xa.reshape((1,3))
-    assert len(xa.shape)==2; "xa must be an N*3 matrix"
-    assert xa.shape[1]==3; "xa must be 3d"
+    def generate(self):
+        print("Generating params for " + str(self.n_srcs) + " info sources")
+        np.random.seed(self.seed)
+        var = np.random.random(self.n_srcs)*(20-5) + 5
+        self.f_mean = np.random.random(self.n_srcs)*(self.ub-self.lb) + self.lb
+        self.f_cov = np.multiply(np.identity(self.n_srcs), var)
 
-
-    KERNEL = GPy.kern.RBF(input_dim=3, variance=10000., lengthscale=([10,10,10]), ARD = True)
-
-    if gen or not hasattr(toy_func, "invCZ"):
-        # If the test function has not been generated then generate it.
-
-        print("Generating test function")
-        np.random.seed(gen_seed)
-        X0 = np.linspace(0, 100, 8)
-        F1 = np.linspace(0, 100, 8)
-        F2 = np.linspace(0, 100, 8)
-
-        XF = np.array([[i,j,k] for i in X0 for j in F1 for k in F2])
-        mu = np.zeros( XF.shape[0] )
-        C  = KERNEL.K(XF, XF)
-
-        Z = np.random.multivariate_normal(mu, C).reshape(-1,1)
-        invC = np.linalg.inv(C + np.eye(C.shape[0])*1e-3)
-
-        toy_func.invCZ = np.dot(invC, Z)
-        toy_func.XF    = XF
-
-    toy_func.lb    = np.zeros((3,))
-    toy_func.ub    = np.ones((3,))*100
-
-    # if xa.shape==(3,) or xa.shape==(3): xa = xa.reshape(1, 3)
-
-    # assert len(xa.shape)==2, "xa must be an N*3 matrix, each row a 3d point"
-    # assert xa.shape[1]==3, "Test_func: xa must 3d"
-
-    ks = KERNEL.K(xa, toy_func.XF)
-    out = np.dot(ks, toy_func.invCZ)
-
-    E = np.random.normal(0, NoiseSD, xa.shape[0])
-
-    return (out.reshape(-1,1) + E.reshape(-1, 1))
-
-
-def toy_infsrc(n, src, n_srcs=2, gen_seed=11, gen=False):
-    """
-    A Toy info source generator!
-    An mv norm sampler with randomly set params.
-
-    ARGS
-        n: number of samples
-        src: which source to use
-        n_srcs: int, number of source to generate when initiliazing
-        gen_seed: int, rng seed for generated initilization
-        gen: boolean, regenerate mvnrom params
-
-    RETURNS
-        rn: vector of info source samples.
-    """
-
-    ub = 85
-    lb = 15
-
-    if gen or not hasattr(toy_infsrc, "f_mean"):
-        print("Generating params for " + str(n_srcs) + " info sources")
-
-        np.random.seed(gen_seed)
-        var = np.random.random(n_srcs)*(20-5)+5
-        toy_infsrc.f_mean = np.random.random(n_srcs)*(ub-lb)+lb
-        toy_infsrc.f_cov = np.multiply(np.identity(n_srcs), var)
-        toy_infsrc.n_srcs = n_srcs
-
-    assert src < toy_infsrc.n_srcs; "info source out of range"
-    # import pdb; pdb.set_trace()
-    rn = np.random.normal(loc=toy_infsrc.f_mean[src],
-                          scale=toy_infsrc.f_cov[src, src],
-                          size=n)
-
-    return rn.reshape(-1)
 
 
 # Utilities, these work as standalone functions.
@@ -1197,31 +1131,53 @@ if __name__=="__main__":
 
 
     # print("Calling Test Function":wq
+    verbose = True
+    xdim = 1
+    adim = 1
+    dim = xdim + adim
 
-    xa = np.random.uniform(size=(10, 2))*100
-    print("xa")
-    print(xa)
-    f = GP_test( xamin = 0, xamax = 100, seed = 11, x_dim=1, a_dim = 1)
+    f = GP_test(xamin=0, xamax=100, seed=11, x_dim=xdim, a_dim=adim)
 
-    somelists= [np.linspace(0,100,50) for i in range(2)]
-    a = np.array([list(i) for i in itertools.product(*somelists)])
-    print(f(a))
+    if verbose == True:
+        somelists = [np.linspace(0, 100, 30) for i in range(dim)]
+        crssprd = np.array([list(i) for i in itertools.product(*somelists)])
 
-    # print("\nCalling info source")
-    # print("source 0")
-    # print(toy_inf_src(10, 0))
-    # print("source 1")
-    # print(toy_inf_src(10, 1))
-    
+        P = f(crssprd,  noise_std=0)
+        X, Y = np.meshgrid(somelists[0], somelists[0])
+
+        # set up a figure twice as wide as it is tall
+        fig = plt.figure(figsize=(15, 5))
+
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+
+        # plot a 3D surface like in the example mplot3d/surface3d_demo
+        surf = ax.plot_surface(X, Y, np.array(P).reshape(30, 30), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        fig.colorbar(surf, shrink=0.5, aspect=10)
+
+        plt.clabel(surf, inline=1, fontsize=10)
+        plt.xlabel('X')
+        plt.ylabel('Theta')
+        plt.show()
+
+    print("\nCalling info source")
+    input_source = toy_infsrc(n_srcs =2)
+
+    n1 = input_source(n =500, src=0)
+    n2 = input_source(n=500, src=1)
+
+    if verbose == True:
+        plt.hist(n1)
+        plt.hist(n2)
+        plt.show()
 
 
-    #print("\nCalling optimizer")
-    # X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
-    #                                lb=toy_func.xmin,
-    #                                ub=toy_func.xmax,
-    #                                dim_X=1,
-    #                                inf_src=toy_infsrc,
-    #                                distribution="MUSIG")
+    print("\nCalling optimizer")
+     X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
+                                    lb=toy_func.xmin,
+                                    ub=toy_func.xmax,
+                                    dim_X=1,
+                                    inf_src=toy_infsrc,
+                                    distribution="MUSIG")
     
     
 # This stuff goes into a new file problem_runner.py or jupyter notebook
