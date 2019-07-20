@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="17aa51ba-4913-44a4-84ac-9133a6581942" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/input_uncertainty_general.py" beforeDir="false" afterPath="$PROJECT_DIR$/input_uncertainty_general.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -16,15 +16,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/input_uncertainty_general.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="339">
-              <caret line="1205" lean-forward="true" selection-start-line="1205" selection-end-line="1205" />
+            <state relative-caret-position="149">
+              <caret line="487" column="19" selection-start-line="487" selection-start-column="19" selection-end-line="487" selection-end-column="19" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
-                <element signature="e#2586#4258#0" />
-                <element signature="e#3891#3950#0" />
-                <element signature="e#4323#5407#0" />
-                <element signature="e#4323#4727#1" />
-                <element signature="e#4819#5128#0" />
+                <element signature="e#2738#3575#0" />
                 <element signature="e#2597#3099#0" />
                 <element signature="e#3701#5166#0" />
                 <element signature="e#5207#5862#0" />
@@ -32,26 +28,38 @@
                 <element signature="e#5886#6268#1" />
                 <element signature="e#6918#10894#0" />
                 <element signature="e#11046#15609#0" />
+                <element signature="e#11046#11667#1" />
                 <element signature="e#15612#15688#0" />
-                <element signature="e#15874#19829#0" />
+                <element signature="e#16393#20351#0" />
+                <element signature="e#17084#17455#0" />
+                <element signature="e#16873#17159#0" />
+                <element signature="e#18041#18153#0" />
+                <element signature="e#18266#18714#0" />
+                <element signature="e#18853#19114#0" />
+                <element signature="e#19201#19385#0" />
+                <element signature="e#19505#19681#0" />
+                <element signature="e#18609#19060#0" />
+                <element signature="e#20342#20509#0" />
+                <element signature="e#20608#20807#0" />
+                <element signature="e#20908#21156#0" />
+                <element signature="e#21417#21554#0" />
+                <element signature="e#20032#20346#0" />
                 <element signature="e#19901#20163#0" />
-                <element signature="e#20296#21370#0" />
-                <element signature="e#21755#25958#0" />
+                <element signature="e#22228#26497#0" />
+                <element signature="e#22228#23270#1" />
                 <element signature="e#25962#26088#0" />
-                <element signature="e#26468#26883#0" />
-                <element signature="e#26938#27707#0" />
-                <element signature="e#27775#28808#0" />
-                <element signature="e#31226#31288#0" />
+                <element signature="e#29733#38495#0" />
+                <element signature="e#40035#40087#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/TestProblems/synthetics.py">
+        <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="389">
-              <caret line="112" column="22" lean-forward="true" selection-start-line="112" selection-start-column="22" selection-end-line="112" selection-end-column="22" />
+            <state relative-caret-position="168">
+              <caret line="1146" selection-start-line="1146" selection-end-line="1146" />
             </state>
           </provider>
         </entry>
@@ -62,6 +70,7 @@
     <findStrings>
       <find>hasattr</find>
       <find>toy_func</find>
+      <find>impleme</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -128,6 +137,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
@@ -182,6 +192,14 @@
       <option name="presentableId" value="Default" />
       <updated>1563467719353</updated>
     </task>
+    <task id="LOCAL-00001" summary="toy functions adapted a classes. Hopefully this change makes it easier.">
+      <created>1563549407910</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1563549407911</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TodoView">
@@ -198,7 +216,7 @@
     <editor active="true" />
     <layout>
       <window_info id="Favorites" side_tool="true" />
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.18797815" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.18797815" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Version Control" weight="0.32937366" />
       <window_info anchor="bottom" id="Python Console" weight="0.5399568" />
@@ -215,6 +233,80 @@
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
     </layout>
+    <layout-to-restore>
+      <window_info id="Favorites" order="0" side_tool="true" />
+      <window_info content_ui="combo" id="Project" order="1" visible="true" weight="0.18797815" />
+      <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Terminal" order="0" weight="0.32937366" />
+      <window_info anchor="bottom" id="Event Log" order="1" side_tool="true" />
+      <window_info anchor="bottom" id="Version Control" order="2" weight="0.32937366" />
+      <window_info anchor="bottom" id="Python Console" order="3" weight="0.5399568" />
+      <window_info anchor="bottom" id="Message" order="4" />
+      <window_info anchor="bottom" id="Find" order="5" />
+      <window_info anchor="bottom" id="Run" order="6" weight="0.32937366" />
+      <window_info active="true" anchor="bottom" id="Debug" order="7" visible="true" weight="0.39956802" />
+      <window_info anchor="bottom" id="Cvs" order="8" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="9" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="10" weight="0.32937366" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout-to-restore>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="RECENTLY_FILTERED_USER_GROUPS">
+                <collection />
+              </option>
+              <option name="RECENTLY_FILTERED_BRANCH_GROUPS">
+                <collection />
+              </option>
+              <option name="COLUMN_ORDER">
+                <list>
+                  <option value="0" />
+                  <option value="1" />
+                  <option value="2" />
+                  <option value="3" />
+                </list>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="toy functions adapted a classes. Hopefully this change makes it easier." />
+    <option name="LAST_COMMIT_MESSAGE" value="toy functions adapted a classes. Hopefully this change makes it easier." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="debuggerHistoryManager">
+    <expressions id="watch">
+      <expression>
+        <expression-string>dataframe</expression-string>
+        <language-id>Python</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>bytearray</expression-string>
+        <language-id>Python</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+    </expressions>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/ModularVersion/IU_optimizer/__init__.py">
@@ -258,6 +350,13 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$USER_HOME$/.local/lib/python2.7/site-packages/matplotlib/cm.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="343" selection-start-line="343" selection-end-line="343" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/TestProblems/synthetics.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="389">
@@ -265,17 +364,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="168">
+          <caret line="1146" selection-start-line="1146" selection-end-line="1146" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/input_uncertainty_general.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="339">
-          <caret line="1205" lean-forward="true" selection-start-line="1205" selection-end-line="1205" />
+        <state relative-caret-position="149">
+          <caret line="487" column="19" selection-start-line="487" selection-start-column="19" selection-end-line="487" selection-end-column="19" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
-            <element signature="e#2586#4258#0" />
-            <element signature="e#3891#3950#0" />
-            <element signature="e#4323#5407#0" />
-            <element signature="e#4323#4727#1" />
-            <element signature="e#4819#5128#0" />
+            <element signature="e#2738#3575#0" />
             <element signature="e#2597#3099#0" />
             <element signature="e#3701#5166#0" />
             <element signature="e#5207#5862#0" />
@@ -283,16 +385,28 @@
             <element signature="e#5886#6268#1" />
             <element signature="e#6918#10894#0" />
             <element signature="e#11046#15609#0" />
+            <element signature="e#11046#11667#1" />
             <element signature="e#15612#15688#0" />
-            <element signature="e#15874#19829#0" />
+            <element signature="e#16393#20351#0" />
+            <element signature="e#17084#17455#0" />
+            <element signature="e#16873#17159#0" />
+            <element signature="e#18041#18153#0" />
+            <element signature="e#18266#18714#0" />
+            <element signature="e#18853#19114#0" />
+            <element signature="e#19201#19385#0" />
+            <element signature="e#19505#19681#0" />
+            <element signature="e#18609#19060#0" />
+            <element signature="e#20342#20509#0" />
+            <element signature="e#20608#20807#0" />
+            <element signature="e#20908#21156#0" />
+            <element signature="e#21417#21554#0" />
+            <element signature="e#20032#20346#0" />
             <element signature="e#19901#20163#0" />
-            <element signature="e#20296#21370#0" />
-            <element signature="e#21755#25958#0" />
+            <element signature="e#22228#26497#0" />
+            <element signature="e#22228#23270#1" />
             <element signature="e#25962#26088#0" />
-            <element signature="e#26468#26883#0" />
-            <element signature="e#26938#27707#0" />
-            <element signature="e#27775#28808#0" />
-            <element signature="e#31226#31288#0" />
+            <element signature="e#29733#38495#0" />
+            <element signature="e#40035#40087#0" />
           </folding>
         </state>
       </provider>

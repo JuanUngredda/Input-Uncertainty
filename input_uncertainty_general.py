@@ -22,7 +22,7 @@ class testfunction(object):
         return np.array([self.xmin, self.xmax])
 
     def check_input(self, x):
-        if not x.shape[1] == self.dxa or any(x.reshape((-1)) > self.xmax) or any(x.reshape((-1)) < self.xmin):
+        if not x.shape[1] == self.dxa or (x > self.xmax).any() or (x < self.xmin).any():
             raise ValueError("x is wrong dim or out of bounds")
         return x
 
@@ -60,8 +60,8 @@ RETURNS
         self.dx = x_dim
         self.da = a_dim
         self.dxa = x_dim + a_dim
-        self.xmin = xamin
-        self.xmax = xamax
+        self.xmin = np.array([xamin for i in range(self.dxa)])
+        self.xmax = np.array([xamax for i in range(self.dxa)])
         self.KERNEL = GPy.kern.RBF(input_dim=self.dxa, variance=10000., lengthscale=([10] * self.dxa), ARD=True)
         self.generate_function()
 
@@ -84,6 +84,7 @@ RETURNS
 
         self.XF = np.random.uniform(size=(50, self.dxa)) * (self.xmax - self.xmin) + self.xmin
 
+        print("elf.XF",self.XF)
         mu = np.zeros(self.XF.shape[0])
 
         C = self.KERNEL.K(self.XF, self.XF)
@@ -116,8 +117,6 @@ class toy_infsrc():
         var = np.random.random(self.n_srcs)*(20-5) + 5
         self.f_mean = np.random.random(self.n_srcs)*(self.ub-self.lb) + self.lb
         self.f_cov = np.multiply(np.identity(self.n_srcs), var)
-
-
 
 # Utilities, these work as standalone functions.
 def lhs_box(n, lb, ub):
@@ -486,6 +485,207 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, distribution, Nd=100):
 # Distributions for the Input uncertainty. These three post_makers functions
 # go from observed Data -> A_density, A_sampler, Data_sampler
 # TODO: make sure trunc_norm_post works!
+class MUSIG_post():
+    """
+    Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Uniform prior over the input "a" and uncertainty
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self, xmin, xmax, src_data):
+
+        self.xmin = xmin
+        self.xmax = xmax
+        self.h = 101
+        self.sig_arr, self.dltsig = np.linspace(1e-6, 100, self.h, retstep=True)
+        self.a_arr, self.dlta = np.linspace(1e-6, 100, self.h, retstep=True)
+        self.y_n1, self.dlty_n1 = np.linspace(0, 100, 5000, retstep=True)
+
+        self.Data = src_data[~np.isnan(src_data)]
+        self.norm_const()
+
+    def __call__(self, a=5, n=100, method='iu_pdf'):
+        """
+
+        :param a: specific value of input a
+        :param n: number of samples from a distribution pdf
+        :param method: type of method used.
+            iu_pdf: estimates the input uncertainty pdf given a data set
+            iu_pdf_sampler: given the iu pdf. generate samples
+            data_predict_sampler: given the predictive dist pdf. generate samples
+        :return:
+        """
+        if method == 'iu_pdf':
+            return self.post_dens(a)
+        elif method == 'iu_pdf_sampler':
+            return self.post_A_sampler(n)
+        elif method == 'data_predict_sampler':
+            return self.post_Data_sampler(n)
+        else:
+            raise NotImplementedError
+
+    def add(self, datum):
+        """
+        including a new data point to the self.Data attribute and
+        update constant for pdf's.
+        :param datum: new data point
+        """
+        print("\n data point included")
+        self.Data = np.concatenate((self.Data, datum))
+        self.norm_const()
+
+    def log_prior_A_dens(self, a):
+        """
+        log prior using uniform distribution
+        :param a: value of input narray x sigma narray
+        :return:  value of logprior
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+        Lprior = np.zeros(len(a))
+        max_ls = self.xmax;
+        min_ls = self.xmin;
+
+        prior = np.product(1.0 * ((a > min_ls) & (a < max_ls)), axis=1)
+        # avoiding numerical errors with np.log(0.0)
+        Lprior[prior != 0] = np.log(prior[prior != 0])
+        Lprior[prior == 0] = -np.inf
+        return Lprior
+
+    def log_lhood_d_i(self, a, data_i):
+        """
+        log likelihood of normal distribution
+        :param a: value of input narray x sigma narray
+        :param data_i: data in narray
+        :return: log likelihood narray
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+        mu = a[:, 0]
+        var = a[:, 1]
+        Llikelihood_i = (-1.0 / 2) * (1.0 / var) * (data_i - mu) ** 2
+
+        return Llikelihood_i
+
+    def norm_const(self):
+        """
+        calculates normalisation constant. Particularly useful to normalise
+        individual values of a from post_dens_unnormalised
+        :return: normalisation constant of posterior distribution
+        """
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        full_post = self.post_dens_unnormalised(Dom_crssprd)
+        self.nrm_cnst = np.sum(full_post) * self.dltsig * self.dlta
+
+    def cross_prod(self, arr_1, arr_2):
+        """
+        cartesian product between arrays. aux function
+        :param arr_1: array
+        :param arr_2: array
+        :return: cartesian product ndarray
+        """
+        arr_1 = np.array(arr_1).reshape(-1)
+        Dom_sets = [arr_1, arr_2]
+        Dom_crssprd = np.array([list(i) for i in itertools.product(*Dom_sets)])
+        return Dom_crssprd
+
+    def post_dens_unnormalised(self, a):
+        """
+        # This implementation style means that even if there is no data,
+        # the second summation term will be 0 and only the prior will contribute
+        # i.e. this style uses one method for both prior and posterior, prior is NOT a special case.
+        :param a: value of a
+        :return: joint pdf calculated in a
+        """
+
+
+        log_lhood = np.sum([self.log_lhood_d_i(a, d_i) for d_i in self.Data], axis=0)
+        log_post = self.log_prior_A_dens(a) + log_lhood
+        self.post = np.exp(log_post)
+        return self.post
+
+    def marg_post_dens(self, a):
+        """
+        marginilise posterior joint distribution of input A and variance sigma of normal
+        distribution
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        joint_post = self.post_dens_unnormalised(a)
+        joint_post = joint_post.reshape(self.Na, len(self.sig_arr))
+        return np.sum(joint_post, axis=1) * self.dltsig
+
+    def post_dens(self, a):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        a = np.array(a).reshape(-1)
+        self.Na = len(a)
+        Dom_crssprd = self.cross_prod(a, self.sig_arr)
+        pdf_post = self.marg_post_dens(Dom_crssprd)
+        return pdf_post / self.nrm_cnst
+
+    def sampler(self, n, dist, domain):
+        """
+
+        :param n: number of samples
+        :param dist: pdf of distribution. normalised inside the function
+        :param domain: discreatised domain
+        :return: set of samples
+        """
+        assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
+        dist = dist / np.sum(dist)
+        probabilities = dist * (1 / np.sum(dist))
+        val = np.random.choice(domain, n, p=probabilities)
+        return val
+
+    def post_A_sampler(self, n):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+        DomA = np.linspace(self.xmin, self.xmax, 5000)
+        Dist = self.post_dens(DomA)
+        return self.sampler(n, dist=Dist, domain=DomA)
+
+    def post_Data_sampler(self, n):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
+        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
+        pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
+        return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
+
+
 def trunc_norm_post(Data, noisevar=200, lb=np.zeros(2,), ub=100*np.ones(2,)):
     """
     Given i.i.d observations, builds a posterior density and a sampler 
@@ -620,17 +820,29 @@ def beta_post(Data):
     return post_A_dens, post_A_sampler, post_Data_sampler
 
 # TODO: adapt code from Gen_Sample, Fit_Inputs, sample_predict_dens
-def MUSIG_post(Data, lb=np.zeros(2,), ub=100*np.ones(2,)):
+def MUSIG_post(Data):
+
     """
     Gauss mean and Var distribution for input unceraitnty
     Fit_Inputs, Gen_Sample, sample_predict_dens can all be put in here.
     """
 
     def log_prior_A_dens(a):
-        assert len(a.shape)==2; "a must be a matrix"
-        assert a.shape[1]==2; "a must have 2 columns"
-        # TODO implement the prior density
-        return(0)
+        """
+        log of uniform distribution defined over the dominion of the test function
+
+        :param a: nd array of evaluations for prior
+        :return: value for log prior distribution.
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+
+        max_ls = 100.0;
+        min_ls = 0.0;
+        Lprior = np.log(1.0 * ((a > min_ls) & (a < max_ls)))
+        return Lprior
     
     def log_lhood(a, data_i):
         # TODO: implement the likelihood foa single point
@@ -655,14 +867,16 @@ def MUSIG_post(Data, lb=np.zeros(2,), ub=100*np.ones(2,)):
 
 
 # The actual optimizer that puts all the peices together!
+
+
 def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
-                        distribution="trunc_norm",
-                        n_fun_init=10, 
-                        n_inf_init=0, 
-                        Budget=100,
-                        Nx=101,
-                        Na=102, 
-                        Nd=103):
+                      distribution = "MUSIG",
+                      n_fun_init = 10,
+                      n_inf_init = 0,
+                      Budget = 100,
+                      Nx = 101,
+                      Na = 102,
+                      Nd = 103):
 
     """
     Optimizes the test function integrated over IU_dims. The integral
@@ -687,16 +901,18 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
         Y: observed test_func outputs
         Data: list of array of inf_src observations
         TODO: any extra tracking variables!
-    """
+        """
 
+    print("lb", lb)
+    print("ub", ub)
     lb = lb.reshape(-1)
     ub = ub.reshape(-1)
 
-    assert dim_X < lb.shape[0]; "More X dims than possible"
-    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
-    assert np.all(lb<=ub); "lower must be below upper!"
+    assert dim_X < lb.shape[0], "More X dims than possible"
+    assert lb.shape[0]==ub.shape[0], "bounds must be same shape"
+    assert np.all(lb<=ub), "lower must be below upper!"
 
-    assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
+    assert ub.shape[0] == lb.shape[0], "lb and ub must be the same shape!"
     # assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
     # assert np.all(IU_dims>=0); "IU_dims too low!"
 
@@ -715,7 +931,7 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
     # we will need this for making discretizations.
     X_sampler = lambda n: lhs_box(n, lb[:dim_X], ub[:dim_X])
 
-   
+
     # Initilize GP model
     XA  = lhs_box(n_fun_init, lb, ub)
     Y   = sim_fun(xa=XA)
@@ -731,7 +947,7 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
     Ndata = lambda: np.sum([d_src.shape[0] for d_src in Data])
 
     print("Initialization complete, budget used: ", n_fun_init + n_inf_init, "\n")
-    
+
     # TODO: add tracking such as timings, Xr, OC, hyperparameters, include them all in the returned outputs
 
     # Let's get the party started!
@@ -745,7 +961,7 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
         # Discretize X by lhs and discretize A with posterior samples as required.
         X_grid = X_sampler(Nx)
 
-        # KG+DL take a standard unweighted average over A_grid, i.e. A_grid must 
+        # KG+DL take a standard unweighted average over A_grid, i.e. A_grid must
         # be samples from posterior over A! Don't use linspace!
         A_density, A_sampler, _ = post_maker(Data)
         A_grid = A_sampler(Na)
@@ -755,7 +971,7 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
         # Get KG of both simulation and Input uncertainty.
         topxa, topKG  = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
         topsrc, topDL = DeltaLoss(GPmodel, Data, X_grid, A_grid, W_A, distribution, Nd)
-        
+
         if topKG > topDL:
             # if simulation is better
             print("Best is simulator: ", topxa, topKG)
@@ -763,17 +979,17 @@ def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,
 
             XA = np.vstack([XA, topxa])
             Y = np.concatenate([Y, new_y])
-        
+
         else:
             # if info source is better
             print("Best is info source: ", topsrc, topDL)
             new_d = inf_src(s=1, src=topsrc)
             Data[topsrc] = np.concatenate([Data[topsrc], new_d])
-        
+
         print(" ")
 
     # TODO: return extra variables to be tracked, Opportunity cost, recomended X, KG/DL time series, hyper parameters
-    return XA, Y, Data 
+    return XA, Y, Data
 
 
 ##############################################################################################################################
@@ -786,11 +1002,11 @@ def Gen_Sample(Dist, N=500):
     """
     Given a pmf generates samples assuming pmf is over equally
     spaced points in 0,...,100
-    
+
     ARGS
      Dist: vector of probalilities
      N: sample size
-    
+
     RETURNS
      val: samples from set of qually spaced points in 0,..,100
     """
@@ -877,254 +1093,254 @@ def sample_predict_dens(Data, N, MUSIG0_L, MU_L, SIG_L):
         return zn
 
 
-# def old_Mult_Input_Uncert(sim_fun, lb, ub, IU_dims, inf_src,
-#                       distribution="trunc_norm",
-#                       n_fun_init=10,
-#                       n_inf_init=0,
-#                       Budget=100,
-#                       Nx=101,
-#                       Na=102,
-#                       Nr=103):
-#
-#     """
-#     Optimizes the test function integrated over IU_dims. The integral
-#     is also changing over time and learnt.
-#
-#     ARGS
-#         sim_fun: callable simulator function, input (x,a), returns scalar
-#         lb: lower bounds on (x,a) vector input to test_fun
-#         ub: upper bounds on (x,a) vector input to test_fun
-#         IU_dims: int, list of dims of (x,a) that are 'a' (eg 2nd and 3rd dim [1,2])
-#         inf_src: callable function returning info source data
-#         distribution: which prior/posterior to use for the uncertain parameters
-#         n_fun_init: number of inital points for GP model
-#         n_inf_init: number of intial points for info source
-#         Budget: total budget of calls to test_fun and inf_src
-#         Nx: int, discretization size of X
-#         Na: int, discretization size of A
-#         Nr: int, discretization size of ?
-#
-#     RETURNS
-#         X: observed test_func inputs
-#         Y: observed test_func outputs
-#         Data: list of array of inf_src observations
-#         rec_X: the recomended X values
-#     """
-#
-#     IU_dims = np.array(IU_dims)
-#
-#     lb = lb.reshape(-1)
-#     ub = ub.reshape(-1)
-#
-#     assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
-#     assert np.all(lb<=ub); "lower must be below upper!"
-#
-#     assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
-#     assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
-#     assert np.all(IU_dims>=0); "IU_dims too low!"
-#
-#     # TODO: implement lb and ub, currently 0,100 is hardcoded.
-#     # TODO: implelemt arbitrary dimensions of x, a, currently dim_x=1, dim_a=2 is hardcoded.
-#     # TODO: rename application specific variables "MU_L", "SIG_L", "MUSIG0" etc to generalised "A".
-#     # TODO: use IU_dims, The optimizer needs to know which dims of sim_fun are X and which are A
-#     # TODO: restructure 'Data' to be a list of arrays rather than a matrix of nan/floats?
-#
-#     # TODO: generalize dimension and bounds
-#     x = np.linspace(0, 100, Nx) #vector of input variable
-#     dim = len(IU_dims)
-#
-#     # Make lattice over IU parameter space.
-#     # TODO: generalise to arbitrary A dims/info sources
-#     # TODO: refresh the lattice every iteration?
-#     MU = np.linspace(0, 100, Na)
-#     SIG = np.linspace(0.025, 100, Na)
-#     rep_MU = np.repeat(MU, Na)
-#     rep_SIG = np.tile(SIG, Na)
-#     MUSIG0 = np.c_[rep_MU, rep_SIG]
-#
-#     MU_L  = np.linspace(0,100,101)
-#     SIG_L = np.linspace(0.025,100,101)
-#
-#     X_L   = np.repeat(MU_L, 101)
-#     W_L   = np.tile(SIG_L, 101)
-#     MUSIG0_L = np.c_[X_L, W_L]
-#
-#     # TODO: make this function standalone, callable from outside of Multi_Inpur_Uncert, just like KG_Mc_Input
-#     # TODO: make this function IU distribution agnostic as described below trunc_norm_post function
-#     def Delta_Loss(model, Data, src, Xr, XdAd, Nr=102, Nx=101, Nd=100):
-#         # return(-100000000)
-#         """
-#         Compute the improvement due to querying an info source.
-#
-#         ARGS
-#             model: GPy model
-#             Data: n*Ns matrix, info source observations
-#             src: which info source to compute DL for.
-#             Xr: recomended X value with current data
-#             XdAd: discretization over X x A
-#             Nr: int
-#             Nx: int
-#             Nd: int
-#
-#         RETURNS
-#             DL: the delta loss for source idx!
-#         """
-#
-#         Data_src = Data[~np.isnan(Data[:,src]), src]
-#
-#         # import pdb; pdb.set_trace()
-#         def W_aj(Y, a):
-#             """
-#             ?
-#             ARGS
-#                 Y: array
-#                 a: unused?
-#
-#             RETURNS
-#                 marg_ma_val: float
-#             """
-#             MU = np.linspace(0,100, 60)
-#             SIG = np.linspace(0.25, 100, 60)
-#             d = np.vstack(np.hstack(Y))
-#             N = Y.shape[1]
-#             dimY = Y.shape[0]
-#
-#             # TODO: split up into multiple lines
-#             expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-MU)**2,dimY,axis=0),axis=1)))
-#             consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-#             L = np.split(expo*consts, dimY, axis=1)
-#             marg_mu_dist = np.sum(L,axis=1)*(SIG[1]-SIG[0])
-#
-#             C = np.sum(marg_mu_dist,axis=1)*(MU[1]-MU[0])
-#             marg_mu_dist = marg_mu_dist*(1/np.vstack(C))
-#
-#             # TODO: split up into multiple lines
-#             expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-a)**2,dimY,axis=0),axis=1)))
-#             consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-#             L = np.split(expo*consts, dimY, axis=1)
-#             marg_mu_val = np.sum(L,axis=1)*(SIG[1]-SIG[0])*(1/np.vstack(C))
-#
-#             return marg_mu_val
-#
-#         Xr = Xr.reshape((1,-1))
-#         dim_X = Xr.shape[1]
-#
-#         # We need two functions, a posterior density and a posterior sampler.
-#         # TODO: merge both of these cases into one: sample_predict_dens also handles prior.
-#         if not Data_src.shape[0]==0:
-#             # If we have data, sample from posterior
-#             # TODO: replace MU, MUSIG etc with Ad as appropriate, generalise A dimension
-#             z1 = sample_predict_dens(Data_src, N=Nd, MUSIG0_L=MUSIG0_L, MU_L=MU_L, SIG_L=SIG_L)
-#             Ad = XdAd[:, src+dim_X]
-#             W_D = W_aj(Y=Data_src, a=Ad)
-#             dj = np.c_[Data_src*Nd, z1]
-#
-#         else:
-#             # If we have no data, sample from prior
-#             z1 = np.random.random(Nd)*100
-#             Ad = XdAd[:, src+dim+X]
-#             # TODO: generalize bound
-#             W_D = np.array([list(np.repeat([1.0/100], Nx*Nr))])
-#             dj = np.vstack(z1)
-#
-#         W_D1 = W_aj(Y=dj, a=Ad)
-#
-#         Wi = W_D1/W_D
-#         Wi = Wi.reshape(Nd, Nx, Nr)
-#
-#         M_XdAd = model.predict(XdAd)[0].reshape(Nx, Nr)
-#
-#         IU_D1 = np.mean(np.multiply(Wi, M_XdAd), axis=2)
-#         max_IU_D1 = np.max(IU_D1, axis=1)
-#
-#         # TODO: generalise dimension change 1:3 to dim_X:(dim_X+dim_A)
-#         M_Xr = model.predict(np.array(np.c_[np.repeat(Xr, Nr), XdAd[:Nr,1:3]]))[0].T
-#
-#
-#         IU_D = np.mean(np.mean(np.multiply(Wi, M_Xr), axis=2), axis=1)
-#         DL = np.mean(max_IU_D1 - IU_D)
-#
-#         return DL
-#
-#
-#     #=============================================================================================
-#     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#     #=============================================================================================
-#
-#     # Initilize GP model
-#     XA = lhs(3, n_fun_init)*100
-#     Y  = sim_fun(xa=XA)
-#     ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD=True)
-#
-#     # Initilize input uncertainty model
-#     Data =  np.zeros((0, 2))
-#     Ndata = np.sum(~np.isnan(Data))
-#
-#     print("Initialization complete, budget used: ", XA.shape[0] +  Ndata, "\n")
-#
-#     while XA.shape[0] +  Ndata < Budget:
-#
-#         Ndata = np.sum(~np.isnan(Data))
-#         print("Iteration ", XA.shape[0]+Ndata+1, ":")
-#
-#         # Fit model to simulation data.
-#         GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
-#
-#         # Fit model to IU data and generate samples for KG MC integral.
-#         # TODO: generalise to arbitrary IU variables
-#         if Ndata > 0:
-#             _, A1_pdf = Fit_Inputs(Data[:,0], MUSIG0, MU, SIG)
-#             _, A2_pdf = Fit_Inputs(Data[:,1], MUSIG0, MU, SIG)
-#             A1_samples = Gen_Sample(A1_pdf, Nr)
-#             A2_samples = Gen_Sample(A2_pdf, Nr)
-#         else:
-#             A1_samples = np.random.random(Nr)*100
-#             A2_samples = np.random.random(Nr)*100
-#
-#         # import pdb; pdb.set_trace()
-#
-#         A1_samples = A1_samples.reshape(-1, 1)
-#         A2_samples = A2_samples.reshape(-1, 1)
-#         Xd  = x.reshape(-1,1)
-#
-#         XA_grid = np.c_[np.repeat(Xd, Nr, axis=0),
-#                         np.tile(A1_samples, (Nx,1)),
-#                         np.tile(A2_samples, (Nx,1))]
-#
-#         A_grid = np.c_[A1_samples, A2_samples]
-#         X_grid = XA[:, 0].reshape(-1, 1)
-#
-#         IU = np.mean(GPmodel.predict(XA_grid)[0].reshape(Nx, Nr), axis=1)
-#         Xr = x[np.argmax(IU)]
-#
-#
-#         # Get KG of both simulation and Input uncertainty.
-#         topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
-#
-#         DL = np.array([Delta_Loss(GPmodel, Data, src, Xr, XA_grid) for src in range(inf_src.n_srcs)])
-#         topsrc, topDL = np.argmax(DL), np.max(DL)
-#
-#         if topKG > topDL:
-#             # if simulation is better
-#             print("Best is simulator: ", topxa, topKG)
-#             new_y = sim_fun(topxa)
-#
-#             XA = np.vstack([XA, topxa])
-#             Y = np.concatenate([Y, new_y])
-#
-#         else:
-#             # if info source is better
-#             print("Best is info source: ", topsrc, topDL)
-#             new_d = np.array([ [np.nan]*dim ])
-#             new_d[0, topsrc] = inf_src(s=1, src=topsrc)
-#             Data = np.vstack([Data, new_d])
-#
-#         print(" ")
-#
-#     return XA, Y, Data#, rec_X
-#
-#
-#
+def old_Mult_Input_Uncert(sim_fun, lb, ub, IU_dims, inf_src,
+                      distribution="trunc_norm",
+                      n_fun_init=10,
+                      n_inf_init=0,
+                      Budget=100,
+                      Nx=101,
+                      Na=102,
+                      Nr=103):
+
+    """
+    Optimizes the test function integrated over IU_dims. The integral
+    is also changing over time and learnt.
+
+    ARGS
+        sim_fun: callable simulator function, input (x,a), returns scalar
+        lb: lower bounds on (x,a) vector input to test_fun
+        ub: upper bounds on (x,a) vector input to test_fun
+        IU_dims: int, list of dims of (x,a) that are 'a' (eg 2nd and 3rd dim [1,2])
+        inf_src: callable function returning info source data
+        distribution: which prior/posterior to use for the uncertain parameters
+        n_fun_init: number of inital points for GP model
+        n_inf_init: number of intial points for info source
+        Budget: total budget of calls to test_fun and inf_src
+        Nx: int, discretization size of X
+        Na: int, discretization size of A
+        Nr: int, discretization size of ?
+
+    RETURNS
+        X: observed test_func inputs
+        Y: observed test_func outputs
+        Data: list of array of inf_src observations
+        rec_X: the recomended X values
+    """
+
+    IU_dims = np.array(IU_dims)
+
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+
+    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
+    assert np.all(lb<=ub); "lower must be below upper!"
+
+    assert ub.shape[0] == lb.shape[0]; "lb and ub must be the same shape!"
+    assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
+    assert np.all(IU_dims>=0); "IU_dims too low!"
+
+    # TODO: implement lb and ub, currently 0,100 is hardcoded.
+    # TODO: implelemt arbitrary dimensions of x, a, currently dim_x=1, dim_a=2 is hardcoded.
+    # TODO: rename application specific variables "MU_L", "SIG_L", "MUSIG0" etc to generalised "A".
+    # TODO: use IU_dims, The optimizer needs to know which dims of sim_fun are X and which are A
+    # TODO: restructure 'Data' to be a list of arrays rather than a matrix of nan/floats?
+
+    # TODO: generalize dimension and bounds
+    x = np.linspace(0, 100, Nx) #vector of input variable
+    dim = len(IU_dims)
+
+    # Make lattice over IU parameter space.
+    # TODO: generalise to arbitrary A dims/info sources
+    # TODO: refresh the lattice every iteration?
+    MU = np.linspace(0, 100, Na)
+    SIG = np.linspace(0.025, 100, Na)
+    rep_MU = np.repeat(MU, Na)
+    rep_SIG = np.tile(SIG, Na)
+    MUSIG0 = np.c_[rep_MU, rep_SIG]
+
+    MU_L  = np.linspace(0,100,101)
+    SIG_L = np.linspace(0.025,100,101)
+
+    X_L   = np.repeat(MU_L, 101)
+    W_L   = np.tile(SIG_L, 101)
+    MUSIG0_L = np.c_[X_L, W_L]
+
+    # TODO: make this function standalone, callable from outside of Multi_Inpur_Uncert, just like KG_Mc_Input
+    # TODO: make this function IU distribution agnostic as described below trunc_norm_post function
+    def Delta_Loss(model, Data, src, Xr, XdAd, Nr=102, Nx=101, Nd=100):
+        # return(-100000000)
+        """
+        Compute the improvement due to querying an info source.
+
+        ARGS
+            model: GPy model
+            Data: n*Ns matrix, info source observations
+            src: which info source to compute DL for.
+            Xr: recomended X value with current data
+            XdAd: discretization over X x A
+            Nr: int
+            Nx: int
+            Nd: int
+
+        RETURNS
+            DL: the delta loss for source idx!
+        """
+
+        Data_src = Data[~np.isnan(Data[:,src]), src]
+
+        # import pdb; pdb.set_trace()
+        def W_aj(Y, a):
+            """
+            ?
+            ARGS
+                Y: array
+                a: unused?
+
+            RETURNS
+                marg_ma_val: float
+            """
+            MU = np.linspace(0,100, 60)
+            SIG = np.linspace(0.25, 100, 60)
+            d = np.vstack(np.hstack(Y))
+            N = Y.shape[1]
+            dimY = Y.shape[0]
+
+            # TODO: split up into multiple lines
+            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-MU)**2,dimY,axis=0),axis=1)))
+            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
+            L = np.split(expo*consts, dimY, axis=1)
+            marg_mu_dist = np.sum(L,axis=1)*(SIG[1]-SIG[0])
+
+            C = np.sum(marg_mu_dist,axis=1)*(MU[1]-MU[0])
+            marg_mu_dist = marg_mu_dist*(1/np.vstack(C))
+
+            # TODO: split up into multiple lines
+            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-a)**2,dimY,axis=0),axis=1)))
+            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
+            L = np.split(expo*consts, dimY, axis=1)
+            marg_mu_val = np.sum(L,axis=1)*(SIG[1]-SIG[0])*(1/np.vstack(C))
+
+            return marg_mu_val
+
+        Xr = Xr.reshape((1,-1))
+        dim_X = Xr.shape[1]
+
+        # We need two functions, a posterior density and a posterior sampler.
+        # TODO: merge both of these cases into one: sample_predict_dens also handles prior.
+        if not Data_src.shape[0]==0:
+            # If we have data, sample from posterior
+            # TODO: replace MU, MUSIG etc with Ad as appropriate, generalise A dimension
+            z1 = sample_predict_dens(Data_src, N=Nd, MUSIG0_L=MUSIG0_L, MU_L=MU_L, SIG_L=SIG_L)
+            Ad = XdAd[:, src+dim_X]
+            W_D = W_aj(Y=Data_src, a=Ad)
+            dj = np.c_[Data_src*Nd, z1]
+
+        else:
+            # If we have no data, sample from prior
+            z1 = np.random.random(Nd)*100
+            Ad = XdAd[:, src+dim+X]
+            # TODO: generalize bound
+            W_D = np.array([list(np.repeat([1.0/100], Nx*Nr))])
+            dj = np.vstack(z1)
+
+        W_D1 = W_aj(Y=dj, a=Ad)
+
+        Wi = W_D1/W_D
+        Wi = Wi.reshape(Nd, Nx, Nr)
+
+        M_XdAd = model.predict(XdAd)[0].reshape(Nx, Nr)
+
+        IU_D1 = np.mean(np.multiply(Wi, M_XdAd), axis=2)
+        max_IU_D1 = np.max(IU_D1, axis=1)
+
+        # TODO: generalise dimension change 1:3 to dim_X:(dim_X+dim_A)
+        M_Xr = model.predict(np.array(np.c_[np.repeat(Xr, Nr), XdAd[:Nr,1:3]]))[0].T
+
+
+        IU_D = np.mean(np.mean(np.multiply(Wi, M_Xr), axis=2), axis=1)
+        DL = np.mean(max_IU_D1 - IU_D)
+
+        return DL
+
+
+    #=============================================================================================
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN ALGORITHM %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #=============================================================================================
+
+    # Initilize GP model
+    XA = lhs(3, n_fun_init)*100
+    Y  = sim_fun(xa=XA)
+    ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD=True)
+
+    # Initilize input uncertainty model
+    Data =  np.zeros((0, 2))
+    Ndata = np.sum(~np.isnan(Data))
+
+    print("Initialization complete, budget used: ", XA.shape[0] +  Ndata, "\n")
+
+    while XA.shape[0] +  Ndata < Budget:
+
+        Ndata = np.sum(~np.isnan(Data))
+        print("Iteration ", XA.shape[0]+Ndata+1, ":")
+
+        # Fit model to simulation data.
+        GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1,1), ker, noise_var=0.01)
+
+        # Fit model to IU data and generate samples for KG MC integral.
+        # TODO: generalise to arbitrary IU variables
+        if Ndata > 0:
+            _, A1_pdf = Fit_Inputs(Data[:,0], MUSIG0, MU, SIG)
+            _, A2_pdf = Fit_Inputs(Data[:,1], MUSIG0, MU, SIG)
+            A1_samples = Gen_Sample(A1_pdf, Nr)
+            A2_samples = Gen_Sample(A2_pdf, Nr)
+        else:
+            A1_samples = np.random.random(Nr)*100
+            A2_samples = np.random.random(Nr)*100
+
+        # import pdb; pdb.set_trace()
+
+        A1_samples = A1_samples.reshape(-1, 1)
+        A2_samples = A2_samples.reshape(-1, 1)
+        Xd  = x.reshape(-1,1)
+
+        XA_grid = np.c_[np.repeat(Xd, Nr, axis=0),
+                        np.tile(A1_samples, (Nx,1)),
+                        np.tile(A2_samples, (Nx,1))]
+
+        A_grid = np.c_[A1_samples, A2_samples]
+        X_grid = XA[:, 0].reshape(-1, 1)
+
+        IU = np.mean(GPmodel.predict(XA_grid)[0].reshape(Nx, Nr), axis=1)
+        Xr = x[np.argmax(IU)]
+
+
+        # Get KG of both simulation and Input uncertainty.
+        topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
+
+        DL = np.array([Delta_Loss(GPmodel, Data, src, Xr, XA_grid) for src in range(inf_src.n_srcs)])
+        topsrc, topDL = np.argmax(DL), np.max(DL)
+
+        if topKG > topDL:
+            # if simulation is better
+            print("Best is simulator: ", topxa, topKG)
+            new_y = sim_fun(topxa)
+
+            XA = np.vstack([XA, topxa])
+            Y = np.concatenate([Y, new_y])
+
+        else:
+            # if info source is better
+            print("Best is info source: ", topsrc, topDL)
+            new_d = np.array([ [np.nan]*dim ])
+            new_d[0, topsrc] = inf_src(s=1, src=topsrc)
+            Data = np.vstack([Data, new_d])
+
+        print(" ")
+
+    return XA, Y, Data#, rec_X
+
+
+
 
 
 if __name__=="__main__":
@@ -1136,13 +1352,17 @@ if __name__=="__main__":
     adim = 1
     dim = xdim + adim
 
-    f = GP_test(xamin=0, xamax=100, seed=11, x_dim=xdim, a_dim=adim)
+    toy_func = GP_test(xamin=0, xamax=100, seed=11, x_dim=xdim, a_dim=adim)
 
     if verbose == True:
-        somelists = [np.linspace(0, 100, 30) for i in range(dim)]
+        h = 30
+        somelists = [np.linspace(0, 100, h) for i in range(dim)]
         crssprd = np.array([list(i) for i in itertools.product(*somelists)])
 
-        P = f(crssprd,  noise_std=0)
+        print("crssprd", crssprd)
+        P = toy_func(crssprd,  noise_std=0)
+
+        print("P", P)
         X, Y = np.meshgrid(somelists[0], somelists[0])
 
         # set up a figure twice as wide as it is tall
@@ -1151,7 +1371,7 @@ if __name__=="__main__":
         ax = fig.add_subplot(1, 2, 1, projection='3d')
 
         # plot a 3D surface like in the example mplot3d/surface3d_demo
-        surf = ax.plot_surface(X, Y, np.array(P).reshape(30, 30), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+        surf = ax.plot_surface(X, Y, np.array(P).reshape(h, h), cmap=cm.coolwarm, linewidth=0, antialiased=False)
         fig.colorbar(surf, shrink=0.5, aspect=10)
 
         plt.clabel(surf, inline=1, fontsize=10)
@@ -1170,14 +1390,13 @@ if __name__=="__main__":
         plt.hist(n2)
         plt.show()
 
-
     print("\nCalling optimizer")
-     X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
-                                    lb=toy_func.xmin,
-                                    ub=toy_func.xmax,
-                                    dim_X=1,
-                                    inf_src=toy_infsrc,
-                                    distribution="MUSIG")
+    X, Y, Data = Mult_Input_Uncert(sim_fun=toy_func,
+                                   lb=toy_func.xmin,
+                                   ub=toy_func.xmax,
+                                   dim_X=toy_func.dx,
+                                   inf_src=toy_infsrc,
+                                   distribution="MUSIG")
     
     
 # This stuff goes into a new file problem_runner.py or jupyter notebook
