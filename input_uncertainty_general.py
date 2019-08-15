@@ -815,54 +815,6 @@ def beta_post(Data):
     
     return post_A_dens, post_A_sampler, post_Data_sampler
 
-# TODO: adapt code from Gen_Sample, Fit_Inputs, sample_predict_dens
-# def MUSIG_post(Data):
-#
-#     """
-#     Gauss mean and Var distribution for input unceraitnty
-#     Fit_Inputs, Gen_Sample, sample_predict_dens can all be put in here.
-#     """
-#
-#     def log_prior_A_dens(a):
-#         """
-#         log of uniform distribution defined over the dominion of the test function
-#
-#         :param a: nd array of evaluations for prior
-#         :return: value for log prior distribution.
-#         """
-#         assert len(a.shape) == 2;
-#         "a must be a matrix"
-#         assert a.shape[1] == 2;
-#         "a must have 2 columns"
-#
-#         max_ls = 100.0;
-#         min_ls = 0.0;
-#         Lprior = np.log(1.0 * ((a > min_ls) & (a < max_ls)))
-#         return Lprior
-#
-#     def log_lhood(a, data_i):
-#         # TODO: implement the likelihood foa single point
-#         return(0)
-#
-#     def post_A_dens(a):
-#         # This implementation style means that even if there is no data,
-#         # the second summation term will be 0 and only the prior will contribute
-#         # i.e. this style uses one method for both prior and posterior, prior is NOT a special case.
-#         log_post = log_prior_A_dens(a) + np.sum([log_lhood(a, d_i) for d_i in Data], axis=1)
-#         return(np.exp(log_post))
-#
-#     def post_A_sampler(n):
-#         # TODO: implement
-#         return(0)
-#
-#     def post_Data_sampler(n):
-#         # TODO imeplement
-#         return(0)
-#
-#     return post_A_dens, post_A_sampler, post_Data_sampler
-
-
-# The actual optimizer that puts all the peices together!
 
 @writeCSV('output')
 def Mult_Input_Uncert(sim_fun, lb, ub, dim_X, inf_src,

@@ -146,6 +146,7 @@ class Ambulance_Delays:
 
     def __check_x(self, x):
         # sanity checking input, dimensions, bounds
+
         if not len(x) == self.dx:
             raise ValueError("x is wrong dimension")
 
@@ -170,21 +171,31 @@ class Ambulance_Delays:
 
         return peak
 
-    def __call__(self, x=None, peak=None, seed=None):
-        
-        if seed is not None:
-            np.random.seed(seed)
+    def __call__(self, x=None, peak=None, seed=None,*args,**kwargs):
 
-        assert x is not None, "give an x vector!"
-        assert p is not None, "give a p vector!"
-        
-        x = self.__check_x(x)
-        x = x.reshape((-1, 2))
-        
-        peak = self.__check_peak(peak)   
+        assert len(x.shape) == 2 , "insert ndarray"
 
-        output = self.Simulate(x, peak=peak, rate=self.rate, m=self.m, s=self.s, vf=self.vf, vs=self.vs)
-        return output
+        out = np.zeros(x.shape[0])
+
+        for idx, x_val in enumerate(x):
+
+            if seed is not None:
+                np.random.seed(seed)
+
+            assert x[idx] is not None, "give an x vector!"
+            assert peak[idx] is not None, "give a p vector!"
+
+            x_vect = self.__check_x(x[idx])
+            x_vect = x_vect.reshape((-1, 2))
+
+            peak_vect = self.__check_peak(peak[idx])
+
+            output = self.Simulate(x_vect, peak=peak_vect, rate=self.rate, m=self.m, s=self.s, vf=self.vf, vs=self.vs)
+
+            out[idx] = output
+
+        print("out",out)
+        return out
 
     def testmode(self, x, p, num_seeds=100):
         testseeds = np.linspace(1000000, 1000000 + num_seeds, num_seeds).astype(int)

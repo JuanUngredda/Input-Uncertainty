@@ -4,27 +4,37 @@
 # I have just put it here to show how to structure the code :)
 
 
-from IU_optimizer.Input_Uncertainty import Multi_Input_Uncert
+from IU_optimizer import *
 from TestProblems import toyfun, toysource
-import numpy as np
-import pandas as pd
-from pprint import pprint
 
-# initilize the optimizer
-myoptimizer = Multi_Input_Uncert(f=toyfun,
-                                 inf_src=toysource,
-                                 xran=toyfun.xran,
-                                 wran=toyfun.wran,
-                                 inf_prior="Gaussian",
-                                 inf_lhood="Gaussian")
 
-# now run the optimizer 100 times and save all outputs
+print("\nCalling optimizer")
+myoptimizer = Mult_Input_Uncert()
 
-OC ,N_I, var = myoptimizer(init_sample=10, iu_init=10, EndN=100, seed=1)
 
-data = {'OC': OC,
-        'len': [N_I]*len(OC),
-        'var1':[var[0]]*len(OC),
-        'var2':[var[1]]*len(OC)}
+# # now run the optimizer 100 times and save all outputs
+"""
+Choose optimsiation method between:
+- KG_DL: Use Knowledge gradient and Delta Loss for sampling.
+- KG_fixed_iu: use fixed quantity of data source points initially and optimise by KG.
 
-pprint('data',data)
+Choose distribution method between:
+-trunc_norm: Normal Likelihood and Uniform prior for input. Assumes known variance in the data.
+-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
+
+"""
+for rp in range(100):
+    [XA], [Y], [Data] = myoptimizer(sim_fun = toyfun(), inf_src= toysource(d=1),
+                          lb_x = toyfun().xmin, ub_x = toyfun().xmax,
+                          lb_a = toyfun().amin, ub_a = toyfun().amax,
+                          distribution = "trunc_norm",
+                          n_fun_init = 10,
+                          n_inf_init = 0,
+                          Budget = 100,
+                          Nx = 101,
+                          Na = 100,
+                          Nd = 100,
+                          GP_train = True,
+                          var_data= np.array([1]),
+                          opt_method="KG_DL",
+                          rep = rp)

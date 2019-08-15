@@ -1,79 +1,921 @@
 import numpy as np
-import scipy
+import itertools
+import pandas as pd
+from pyDOE import lhs
+from scipy import optimize
+from scipy.optimize import minimize
 from scipy.stats import norm
+import os
+from functools import wraps
+import logging
+from matplotlib import pyplot as plt
+import sys
+import __main__ as main
+import pandas as pd
+import time
+
 
 # In this file put any simple little functions that can be abstracted out of the
 # main code, eg samplers, plotting, saving, more complex mathematical operations
 # tat don't have any persistent state etc.
 
-def Fit_Inputs(Y, MUSIG0, MU, SIG):
-    # Takes data Y, and makes an unnormalized bar chart Dist.
-    #
-    # ARGS
-    #  - Y : vector of samples.....
-    #  - MUSIG0: matrix of .....
-    #  - MU: vector for....
-    #  - SIG: vector for....
-    #
-    # RETURNS
-    #  - MU: vector.....
-    #  - Dist: barchart
 
-    Y = np.array(Y)
-    Y = list(Y[~np.isnan(Y)])
 
-    L = np.sum(np.array((np.matrix(MUSIG0[:,0]).T  - Y))**2.0,axis=1)
-    L = np.exp(-(1.0/(2.0*MUSIG0[:,1])) * L)
-    L = L*(1.0/np.sqrt(2*np.pi*MUSIG0[:,1]))**len(Y)
-    L = np.array(L).reshape(len(MU),len(SIG))
+logger = logging.getLogger(__name__)
 
-    dmu = MU[1]-MU[0]
-    dsig = SIG[1]-SIG[0]
-    LN = np.sum(L*dmu*dsig)
-    P = L/LN
-    Dist = np.sum(P,axis=1)*dsig
 
-    return MU, Dist
+class writeCSV_time_stats():
+    """
+    This decorator saves the running times and then converts it into a csv file
+    """
+    def __init__(self, function):
+        self.function = function
+        self.folder = os.path.basename(sys.argv[0])[0:-3] + "_stats/" + "time"
+        if os.path.isdir(self.folder) == False:
+            os.makedirs(self.folder)
+        self.time_data = {}
+
+    def __call__(self, *args, **kwargs):
+
+        start = time.time()
+        result = self.function(*args, **kwargs)
+        end = time.time()
+
+        if self.function.__name__ not in self.time_data.keys():
+            self.time_data[self.function.__name__] = [end - start]
+        else:
+            self.time_data[self.function.__name__].append(end - start)
+
+        data = self.time_data
+        gen_file = pd.DataFrame.from_dict(data)
+        cwd = os.getcwd()
+        path = cwd + "/" + self.folder + '/time_'+ self.function.__name__ + '.csv'
+        gen_file.to_csv(path_or_buf=path)
+        return result
+
+def writeCSV_run_stats():
+    """
+    :return: generates file with statistics from store_stats()
+    """
+    folder = os.path.basename(sys.argv[0])[0:-3] + "_stats/" + "run_stats"
+    if os.path.isdir(folder) == False:
+        os.makedirs(folder)
+
+    def decorator(func):
+        def wrapcsv(*args, **kwargs):
+            data = func(*args, **kwargs)
+            gen_file = pd.DataFrame.from_dict(data)
+            cwd = os.getcwd()
+            path = cwd + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
+            gen_file.to_csv(path_or_buf=path)
+            return data
+        return wrapcsv
+    return decorator
+
+@writeCSV_time_stats
+def func_caller(func, x, a):
+    """calls the simulation function and return its value."""
+    return func(x, a)
+
+class store_stats():
+    """
+    Calculates the important statistics that will be recorded during the run of the algorithm. Specifically,
+    X_r: Recommended design using the mean of the Gaussian process.
+    OC: Opportunity cost. difference between true function evaluated at best design with true inputs and
+      function evaluated at recommended design with true inputs. This is done by discretising the space using
+      latin hypercube to find the true and recommended value. The discretisation is the same in both cases so the max
+      values between the two can be compared.
+    KG: Knowledge Gradient recommended design and value for that design.
+    DL: Delta Loss recommended source and value of Delta Loss
+    HP: Hyperparameters of gaussian process name/values.
+
+
+    """
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub,  rep, max_prob = True):
+
+        self.rep = rep
+        self.lb = lb
+        self.ub = ub
+        self.dimX = dimX
+        self.dimXA = dimXA
+        self.test_func = test_func
+        self.test_infr = test_infr
+        self.tp = (-1) ** max_prob
+        lb_X = lb[:dimX]
+        ub_X = ub[:dimX]
+        self.Xd = lhs_box(50000, lb_X, ub_X)
+        self.top_XA = self.find_top_X()
+        self.X_r = []
+        self.OC = []
+        self.KG = []
+        self.DL = []
+        self.HP_names = []
+        self.HP_values = []
+
+
+    def __call__(self,model, Data, XA, Y, A_sample, KG = np.nan, DL = np.nan ,HP_names = None,HP_values=None):
+
+        X_r = self.recommended_X(model, A_sample)
+        OC = self.Opportunity_cost(X_r)
+
+        self.X_r.append(X_r)
+        self.OC.append(OC)
+        self.KG.append(KG)
+        self.DL.append(DL)
+        self.HP_names.append(HP_names)
+        self.HP_values.append(HP_values)
+
+        #file accesed by the decorator to be printed in a csv file.
+        registered_vars = self.log_file(X_r = self.X_r,
+                                        OC = self.OC,
+                                        KG = self.KG,
+                                        DL = self.DL,
+                                        HP_names = self.HP_names,
+                                        HP_vars = self.HP_values,
+                                        file_number = self.rep)
+
+        return registered_vars
+
+    @writeCSV_run_stats()
+    def log_file(self, **kwargs):
+        '''
+        dummy function. receives and outputs the same arguments. but allows writeCSV to pick up the names of the
+        variables to be printed in the csv file
+        '''
+        return kwargs
+
+    def find_top_X(self):
+        """
+        Finds best value of true function given discretisation lhs_box.
+        :return: narray. design from max test function
+        """
+        Xd = self.Xd
+        Ad = self.test_infr.f_mean
+        Ad = np.array([Ad])
+
+        Nx = Xd.shape[0]
+        Na = Ad.shape[0]
+
+        XdAd = np.hstack([np.repeat(Xd, Na, axis=0),
+                          np.tile(Ad, (Nx, 1))])
+
+        M_Xd = self.test_func( XdAd[:,0:self.dimX], XdAd[:,self.dimX:self.dimXA], noise_std=0).reshape(Nx, Na)
+
+        M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
+
+        self.M_true = M_Xd
+        topX = Xd[np.argmin(M_Xd * self.tp)]
+
+        self.topX = topX
+        topXA = np.c_[[topX], [self.test_infr.f_mean]]
+
+        return topXA
+
+    def Opportunity_cost(self,X_r):
+        """
+
+        :param X_r: Recommended design given lhs discretisation.
+        :return: OC: int, Opportunity cost. difference between true function evaluated at best design with true inputs and
+      function evaluated at recommended design with true inputs. This is done by discretising the space using
+      latin hypercube to find the true and recommended value. The discretisation is the same in both cases so the max
+      values between the two can be compared.
+        """
+
+        # XA_r = np.c_[X_r, [self.test_infr.f_mean]]
+        X_r = np.vstack(np.array([X_r]))
+        self.test_infr.f_mean = np.vstack(np.array([self.test_infr.f_mean]))
+        self.topX = np.vstack(np.array([self.topX]))
+
+        val_recom = self.test_func(X_r, self.test_infr.f_mean, noise_std=0 )
+        val_opt = self.test_func(self.topX , self.test_infr.f_mean, noise_std=0 )
+        OC = val_opt - val_recom
+        return OC
+
+    def recommended_X(self, model, A_sample):
+        """
+
+        :param model: trained GP model
+        :param A_sample: Sample from posterior input distribution to marginilise input.
+        :return: recommended design, X_r. using lhs discretisation
+        """
+
+        Xd = self.Xd
+        Ad = np.stack(A_sample, axis=-1)
+        Nx = Xd.shape[0]
+        Na = Ad.shape[0]
+
+        XdAd = np.hstack([np.repeat(Xd, Na, axis=0),
+                          np.tile(Ad, (Nx, 1))])
+
+
+        M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
+        M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
+
+        X_r = Xd[np.argmin(M_Xd * self.tp)]
+        return X_r
+
+class MUSIG_post():
+    """
+    Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Uniform prior over the input "a" and uncertainty
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self, amin=0, amax=100):
+        self.xmin = amin
+        self.xmax = amax
+        self.h = 101
+        self.sig_arr, self.dltsig = np.linspace(1e-3, 20, self.h, retstep=True)
+        self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
+        self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
+
+    def __call__(self, src_data):
+        """
+
+        :param src_data: list of narrays. include whole data.
+        :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
+        posterior density distribution.
+        """
+        self.Data_post = src_data
+        return self.post_dens, self.post_A_sampler, self.post_Data_sampler
+
+    def log_prior_A_dens(self, a):
+        """
+        log prior using uniform distribution
+        :param a: value of input narray x sigma narray
+        :return:  value of logprior
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+        Lprior = np.zeros(len(a))
+        max_ls = self.xmax;
+        min_ls = self.xmin;
+        prior = np.product(1.0 * ((a >= min_ls) & (a <= max_ls)), axis=1)
+        Lprior[prior != 0] = np.log(prior[prior != 0])
+        Lprior[prior == 0] = -np.inf
+        return Lprior
+
+    def log_lhood_d_i(self, a, data_i):
+        """
+        log likelihood of normal distribution
+        :param a: value of input narray x sigma narray
+        :param data_i: data in narray
+        :return: log likelihood narray
+        """
+        assert len(a.shape) == 2, "a must be a matrix"
+        assert a.shape[1] == 2, "a must have 2 columns"
+        mu = a[:, 0]
+        var = a[:, 1]
+        Llikelihood_i = (-1.0 / 2) * (1.0 / var) * ((data_i - mu) ** 2) - np.log(np.sqrt(2 * np.pi * var))
+        return Llikelihood_i
+
+    def norm_const(self):
+        """
+        calculates normalisation constant. Particularly useful to normalise
+        individual values of a from post_dens_unnormalised
+        :return: normalisation constant of posterior distribution
+        """
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        full_post = self.post_dens_unnormalised(Dom_crssprd)
+        self.nrm_cnst = np.sum(full_post) * self.dltsig * self.dlta
+
+    def cross_prod(self, arr_1, arr_2):
+        """
+        cartesian product between arrays. aux function
+        :param arr_1: array
+        :param arr_2: array
+        :return: cartesian product ndarray
+        """
+        arr_1 = np.array(arr_1).reshape(-1)
+        Dom_sets = [arr_1, arr_2]
+        Dom_crssprd = np.array([list(i) for i in itertools.product(*Dom_sets)])
+        return Dom_crssprd
+
+    def post_dens_unnormalised(self, a):
+        """
+        # This implementation style means that even if there is no data,
+        # the second summation term will be 0 and only the prior will contribute
+        # i.e. this style uses one method for both prior and posterior, prior is NOT a special case.
+        :param a: value of a
+        :return: joint pdf calculated in a
+        """
+        log_lhood = np.sum([self.log_lhood_d_i(a, d_i) for d_i in self.Data_i], axis=0)
+        log_post = self.log_prior_A_dens(a) + log_lhood
+        self.post = np.exp(log_post)
+        return self.post
+
+    def marg_post_dens(self, a):
+        """
+        marginilise posterior joint distribution of input A and variance sigma of normal
+        distribution
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        joint_post = self.post_dens_unnormalised(a)
+        joint_post = joint_post.reshape(self.Na, len(self.sig_arr))
+        return np.sum(joint_post, axis=1) * self.dltsig
+
+    def post_dens(self, a, src_idx):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        self.norm_const()
+        a = np.array(a).reshape(-1)
+        self.Na = len(a)
+        Dom_crssprd = self.cross_prod(a, self.sig_arr)
+        pdf_post = self.marg_post_dens(Dom_crssprd)
+        return pdf_post / self.nrm_cnst
+
+    def sampler(self, n, dist, domain):
+        """
+
+        :param n: number of samples
+        :param dist: pdf of distribution. normalised inside the function
+        :param domain: discreatised domain
+        :return: set of samples
+        """
+        assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
+        dist = dist / np.sum(dist)
+        probabilities = dist * (1 / np.sum(dist))
+        val = np.random.choice(domain, n, p=probabilities)
+        return val
+
+    def post_A_sampler(self, n, src_idx):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+        DomA = np.linspace(self.xmin, self.xmax, 5000)
+        Dist = self.post_dens(DomA, src_idx)
+        return self.sampler(n, dist=Dist, domain=DomA)
+
+    def post_Data_sampler(self, n, src_idx):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
+        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
+        pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
+        return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
+
+class trunc_norm_post():
+    """
+    Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Uniform prior over just the input "a".
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self, amin=0, amax=100, var = 1.0 ):
+        """
+
+        :param amin: minimum value of prior
+        :param amax: maximum value of prior
+        :param var: set true variance of data.
+        """
+        self.xmin = amin
+        self.xmax = amax
+        self.var = np.array([var]).reshape(-1)
+        self.h = 101
+        self.sig_arr = np.array([var]).reshape(-1)
+        self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
+        self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
+
+    def __call__(self, src_data):
+        """
+
+        :param src_data: list of narrays. include whole data.
+        :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
+        posterior density distribution.
+        """
+        self.Data_post = src_data
+        return self.post_dens, self.post_A_sampler, self.post_Data_sampler
+
+    def log_prior_A_dens(self, a):
+        """
+        log prior using uniform distribution
+        :param a: value of input narray x sigma narray
+        :return:  value of logprior
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+        Lprior = np.zeros(len(a))
+        max_ls = self.xmax;
+        min_ls = self.xmin;
+        min_condition = np.vstack((a[:,0] >= min_ls))
+        max_condition = np.vstack((a[:,0] <= max_ls))
+        prior = np.product(1.0 * (min_condition & max_condition), axis=1)
+        Lprior[prior != 0] = np.log(prior[prior != 0])
+        Lprior[prior == 0] = -np.inf
+        return Lprior
+
+    def log_lhood_d_i(self, a, data_i):
+        """
+        log likelihood of normal distribution
+        :param a: value of input narray x sigma narray
+        :param data_i: data in narray
+        :return: log likelihood narray
+        """
+        assert len(a.shape) == 2, "a must be a matrix"
+        assert a.shape[1] == 2, "a must have 2 columns"
+        mu = a[:, 0]
+        var = a[:, 1]
+        Llikelihood_i = (-1.0 / 2) * (1.0 / var) * ((data_i - mu) ** 2) - np.log(np.sqrt(2 * np.pi * var))
+        return Llikelihood_i
+
+    def norm_const(self):
+        """
+        calculates normalisation constant. Particularly useful to normalise
+        individual values of a from post_dens_unnormalised
+        :return: normalisation constant of posterior distribution
+        """
+        Dom_crssprd = self.cross_prod(self.a_arr, self.var)
+        full_post = self.post_dens_unnormalised(Dom_crssprd)
+        self.nrm_cnst = np.sum(full_post) * self.dlta
+
+    def cross_prod(self, arr_1, arr_2):
+        """
+        cartesian product between arrays. aux function
+        :param arr_1: array
+        :param arr_2: array
+        :return: cartesian product ndarray
+        """
+        arr_1 = np.array(arr_1).reshape(-1)
+        Dom_sets = [arr_1, arr_2]
+        Dom_crssprd = np.array([list(i) for i in itertools.product(*Dom_sets)])
+        return Dom_crssprd
+
+    def post_dens_unnormalised(self, a):
+        """
+        # This implementation style means that even if there is no data,
+        # the second summation term will be 0 and only the prior will contribute
+        # i.e. this style uses one method for both prior and posterior, prior is NOT a special case.
+        :param a: value of a
+        :return: joint pdf calculated in a
+        """
+        log_lhood = np.sum([self.log_lhood_d_i(a, d_i) for d_i in self.Data_i], axis=0)
+        log_post = self.log_prior_A_dens(a) + log_lhood
+        self.post = np.exp(log_post)
+        return self.post
+
+    def marg_post_dens(self, a):
+        """
+        marginilise posterior joint distribution of input A and variance sigma of normal
+        distribution
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        joint_post = self.post_dens_unnormalised(a)
+        joint_post = joint_post.reshape(self.Na, len(self.sig_arr))
+        return np.sum(joint_post, axis=1)
+
+    def post_dens(self, a, src_idx):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        self.norm_const()
+        a = np.array(a).reshape(-1)
+        self.Na = len(a)
+        Dom_crssprd = self.cross_prod(a, self.sig_arr)
+        pdf_post = self.marg_post_dens(Dom_crssprd)
+        return pdf_post / self.nrm_cnst
+
+    def sampler(self, n, dist, domain):
+        """
+
+        :param n: number of samples
+        :param dist: pdf of distribution. normalised inside the function
+        :param domain: discreatised domain
+        :return: set of samples
+        """
+        assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
+        dist = dist / np.sum(dist)
+        probabilities = dist * (1 / np.sum(dist))
+        val = np.random.choice(domain, n, p=probabilities)
+        return val
+
+    def post_A_sampler(self, n, src_idx):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+        DomA = np.linspace(self.xmin, self.xmax, 5000)
+        Dist = self.post_dens(DomA, src_idx)
+        return self.sampler(n, dist=Dist, domain=DomA)
+
+    def post_Data_sampler(self, n, src_idx):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
+        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
+        pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
+        return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
 
 
 def KG(mu, sig):
-    # Takes a set of intercepts and gradients of linear functions and returns
-    # the average hieght of the max of functions over Gaussain input.
-    #
-    # ARGS
-    # - mu: length n vector, initercepts of linear functions
-    # - sig: length n vector, gradients of linear functions
-    #
-    # IMPLICITLY ASSUMED ARGS
-    # - None
-    #
-    # RETURNS
-    # - out: scalar value is gaussain expectation of epigraph of lin. funs
+    """
+    Takes a set of intercepts and gradients of linear functions and returns
+    the average hieght of the max of functions over Gaussain input.
+
+    ARGS
+        mu: length n vector, initercepts of linear functions
+        sig: length n vector, gradients of linear functions
+
+    RETURNS
+        out: scalar value is gaussain expectation of epigraph of lin. funs
+    """
 
     n = len(mu)
     O = sig.argsort()
     a = mu[O]
     b = sig[O]
-
-
-    A=[0]
-    C=[-float("inf")]
-    while A[-1]<n-1:
+    # print("a",a)
+    # print("b",b)
+    A = [0]
+    C = [-float("inf")]
+    while A[-1] < n - 1:
         s = A[-1]
-        si = range(s+1,n)
-        Ci = -(a[s]-a[si])/(b[s]-b[si])
-        bestsi=np.argmin(Ci)
+        si = range(s + 1, n)
+        Ci = -(a[s] - a[si]) / (b[s] - b[si])
+        bestsi = np.argmin(Ci)
         C.append(Ci[bestsi])
         A.append(si[bestsi])
 
     C.append(float("inf"))
-
     cdf_C = norm.cdf(C)
     diff_CDF = cdf_C[1:] - cdf_C[:-1]
-
     pdf_C = norm.pdf(C)
     diff_PDF = pdf_C[1:] - pdf_C[:-1]
+    # print(" a[A]*diff_CDF - b[A]*diff_PDF", a[A]*diff_CDF - b[A]*diff_PDF)
+    # print("np.max(mu)", np.max(mu))
+    out = np.sum(a[A] * diff_CDF - b[A] * diff_PDF) - np.max(mu)
 
-    out = np.sum( a[A]*diff_CDF + b[A]*diff_PDF ) - np.max(mu)
+    # print("out",out)
+
+    assert out >= -1e-10;
+    "KG cannot be negative"
 
     return out
+
+def lhs_box(n, lb, ub):
+    """
+    Random samples uniform lhs in a box with lower and upper bounds.
+    ARGS
+        n: number of points
+        lb: vector, lower bounds of each dim
+        ub: vector, upper bounds of each dim
+
+    RETURNS
+        LL: an lhs in the box, lb < x < ub
+    """
+
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+
+    assert lb.shape[0]==ub.shape[0]; "bounds must be same shape"
+    assert np.all(lb<=ub); "lower must be below upper!"
+
+    LL = lb + lhs(len(lb), samples=n)*(ub-lb)
+
+    return(LL)
+
+def COV(model, xa1, xa2, chol_K=None, Lk2=None):
+    """Takes a GP model, and 2 points, returns post cov.
+    ARGS
+        model: a gpy object
+        xa1: n1*d matrix
+        xa2: n2*d matrix
+        chol_K: optional precomuted cholesky decompositionb of kern(X,X)
+        Lk2: optional precomputed solve(chol_K, kernel(model.X, xa2)) (eg for XdAd)
+
+    RETURNS
+        s2: posterior GP cov matrix
+     """
+    # print("xa1",xa1)
+    assert len(xa1.shape) == 2;
+    "COV: xa1 must be rank 2"
+    assert len(xa2.shape) == 2;
+    "COV: xa2 must be rank 2"
+    assert xa1.shape[1] == model.X.shape[1];
+    "COV: xa1 must have same dim as model"
+    assert xa2.shape[1] == model.X.shape[1];
+    "COV: xa2 must have same dim as model"
+
+    if chol_K is None:
+        K = model.kern.K(model.X, model.X)
+        chol_K = np.linalg.cholesky(K + (0.1 ** 2.0) * np.eye(len(K)))
+    else:
+        assert chol_K.shape[0] == model.X.shape[0];
+        "chol_K is not same dim as model.X"
+
+    Lk1 = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
+
+    if Lk2 is None:
+        Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, xa2))
+    else:
+        assert Lk2.shape[0] == model.X.shape[0];
+        "Lk2 is not same dim as model.X"
+        assert Lk2.shape[1] == xa2.shape[0];
+        "Lk2 is not same dim as xa2"
+
+    K_ = model.kern.K(xa1, xa2)
+
+    s2 = np.matrix(K_) - np.matmul(Lk1.T, Lk2)
+
+    s2 = np.array(s2)
+
+    # make sure the output is correct!
+    assert s2.shape[0] == xa1.shape[0];
+    "output dim is wrong!"
+    assert s2.shape[1] == xa2.shape[0];
+    "output dim is wrong!"
+
+    return s2
+
+def VAR(model, xa1, chol_K=None):
+    """Takes a GP model, and 1 point, returns post var.
+
+    ARGS
+     model: a gpy object
+     xa1: n1*d matrix
+     chol_K: cholesky decompositionb of kern(X,X)
+
+    RETURNS
+     s2: posterior GP cov matrix
+     """
+
+    assert len(xa1.shape) == 2;
+    "VAR: xa1 must be rank 2"
+    assert xa1.shape[1] == model.X.shape[1];
+    "VAR: xa1 have same dim as model"
+
+    if chol_K is None:
+        K = model.kern.K(model.X, model.X)
+        chol_K = np.linalg.cholesky(K + (0.1 ** 2.0) * np.eye(len(K)))
+
+    Lk = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
+    K_ = model.kern.K(xa1, xa1)
+    s2 = K_ - np.matmul(Lk.T, Lk)
+
+    s2 = np.array(s2)
+
+    return s2
+
+@writeCSV_time_stats
+def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, Nd=101):
+    # make a full lattice over X x A and get the GP mean at each point.
+    """
+
+    :param model: Gaussian Process trained model
+    :param Data:list of arrays, observed source Data
+    :param Xd:
+    :param Ad:
+    :param Wd:
+    :param pst_mkr:
+    :param Nd:
+    :return:
+    """
+    Ad = np.stack(Ad, axis=-1)
+
+    Nx = Xd.shape[0]
+    Na = Ad.shape[0]
+
+    XdAd = np.hstack([np.repeat(Xd, Na, axis=0),
+                      np.tile(Ad, (Nx, 1))])
+
+    # matrix of GP mean, each row is x_i from Xd, each column is a_i from Ad
+    M_XA = model.predict(XdAd)[0].reshape(Nx, Na)
+
+    # precompute inverse weights of Ad points.
+
+    invWd = np.array([1.0]) / Wd  # np.sum(Wd)/Wd
+
+    _, _, cur_Data_sampler = pst_mkr(Data)
+    # get the index of the current top recomended x value.
+    M_X = np.mean(M_XA, axis=1)
+    cur_topX_index = np.argmax(M_X)
+
+    # loop over IU parameters / A dims / inf sources.
+    DL = []
+    y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
+
+    for src in range(len(Data)):
+
+        # loop over individual DL samples
+        DL_src = []
+        for i in range(Nd):
+            # sample a new observation and add it to the original Data
+            tmp_Data_i = np.array([y_Data[src][i]])
+            tmp_Data = Data[:]
+            tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
+
+            # get the importance weights of the Ad points from new posterior
+            tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+
+            Wi = tmp_post_A_dens(Ad[:, src], src_idx=src)
+
+            Wi = Wi * invWd[src]
+            Wi = Wi / np.sum(Wi)
+
+            # now we have weights, get the peak of reweighted GP means
+            M_X_i = np.sum(M_XA * Wi, axis=1)
+
+            DL_i = np.max(M_X_i) - M_X_i[cur_topX_index]
+
+            assert DL_i >= 0, "Delta Loss can't be negative"
+            # keep this single MC sample of DL improvement
+            DL_src.append(DL_i)
+
+        # get the average over DL samples for this source and save in the list.
+        DL.append(np.mean(DL_src))
+
+    # get the best source and its DL.
+
+    topsrc = np.argmax(DL)
+    topDL = np.max(DL)  # - np.max(M_X)
+    return topsrc, topDL
+
+@writeCSV_time_stats
+def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
+    """Takes a GPy model, constructs and optimzes KG and
+    returns the best xa and best KG value.
+
+    ARGS
+        model: GPy model
+        Xd: Nx*x_dim matrix discretizing X
+        Ad: Na*a_dim matrix discretizing A !!!MUST BE SAMPLES FROM POSTERIOR OVER A!!!!!
+        lb: lower bounds on (x,a)
+        ub: upper bounds on (x,a)
+        Ns: number of START points, initial random search of KG
+        Nc: number of CONTINUED points, from the Ns the top Nc points to perform a Nelder Mead run.
+        maxiter: iterations of each Nelder Mead run.
+
+    RETURNS
+        bestxa: the optimal xa
+        bestEVI: the largest KG value
+     """
+
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+    Ad = np.stack(Ad, axis=-1)
+    assert Ns > Nc;
+    "more random points than optimzer points"
+    assert len(Xd.shape) == 2;
+    "Xd must be a matrix"
+    assert len(Ad.shape) == 2;
+    "Ad must be a matrix"
+    assert Xd.shape[0] > 1;
+    "Xd must have more than one row"
+    assert Ad.shape[0] > 1;
+    "Ad must have more than one row"
+    assert Ad.shape[1] + Xd.shape[1] == model.X.shape[1];
+    "Xd, Ad, must have same dim as data"
+    assert lb.shape[0] == ub.shape[0];
+    "bounds must have same dim"
+    assert lb.shape[0] == model.X.shape[1];
+    "bounds must have same dim as data"
+    assert np.all(lb <= ub);
+    "lower must be below upper!"
+
+    # optimizer initial optim
+    KG_Mc_Input.bestEVI = -10
+    KG_Mc_Input.bestxa = 0
+
+    noiseVar = model.Gaussian_noise.variance[0]
+
+    dim_X = Xd.shape[1]
+    Nx = Xd.shape[0]
+    Na = Ad.shape[0]
+
+    XdAd = np.hstack([np.repeat(Xd, Na, axis=0),
+                      np.tile(Ad, (Nx, 1))])
+    # Precompute the posterior mean at X_d integrated over A.
+    M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
+    M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
+
+    # Precompute cholesky decomposition.
+    K = model.kern.K(model.X, model.X)
+    chol_K = np.linalg.cholesky(K + (0.1 ** 2.0) * np.eye(K.shape[0]))
+
+    Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, XdAd))
+
+    KG_Mc_Input.calls = 0
+
+    def KG_IU(xa):
+
+        KG_Mc_Input.calls += 1
+        xa = np.array(xa).reshape((1, -1))
+
+        if np.any(xa < lb) or np.any(xa > ub):
+            return (1000000)
+        else:
+
+            # The current x with all the A samples
+            tile_x = np.tile(xa[:, :dim_X], (Na, 1))
+            newx_Ad = np.hstack([tile_x, Ad])
+
+            # The mean integrated over A.
+            # M_Xd is precomputed
+            M_x = np.mean(model.predict(newx_Ad)[0])
+
+            MM = np.c_[M_x, M_Xd].reshape(-1)
+
+            # The mean warping integrated over Ad
+
+            S_Xd = COV(model, xa, XdAd, chol_K, Lk2)
+            S_Xd = S_Xd.reshape(Nx, Na)
+            S_Xd = np.mean(S_Xd, axis=1).reshape(1, -1)
+            # print("S_Xd",S_Xd)
+            S_x = np.mean(COV(model, xa, newx_Ad, chol_K))
+            SS = np.c_[S_x, S_Xd].reshape(-1)
+
+            # variance of new observation
+            var_xa = VAR(model, xa, chol_K) + noiseVar
+            inv_sd = 1. / np.sqrt(var_xa).reshape(())
+
+            SS = SS * inv_sd
+            # Finally compute KG!
+            out = KG(MM, SS)
+
+            if out > KG_Mc_Input.bestEVI:
+                KG_Mc_Input.bestEVI = out
+                KG_Mc_Input.bestxa = xa
+
+
+            return -out
+
+    # Optimize that badboy! First do Ns random points, then take best Nc results
+    # and do Nelder Mead starting from each of them.
+    XA_Ns = lhs_box(Ns, lb, ub)
+    KG_Ns = np.array([KG_IU(XA_i) for XA_i in XA_Ns])
+    XA_Nc = KG_Ns.argsort()[-Nc:]
+    XA_Nc = XA_Ns[XA_Nc, :]
+
+    _ = [minimize(KG_IU, XA_i, method='nelder-mead', options={'maxiter': maxiter}) for XA_i in XA_Nc]
+
+    return KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI
+
