@@ -35,6 +35,6 @@ for rp in range(100):
                           Na = 100,
                           Nd = 100,
                           GP_train = True,
-                          var_data= np.array([1]),
+                          var_data= 1,
                           opt_method="KG_DL",
                           rep = rp)

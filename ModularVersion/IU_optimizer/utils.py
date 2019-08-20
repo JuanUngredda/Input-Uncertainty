@@ -390,13 +390,14 @@ class MUSIG_post():
         pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
         return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
 
+
 class trunc_norm_post():
     """
     Given i.i.d observations, builds a posterior density and a sampler
     (which can then be used with Delta Loss).
     Inference details:
     Normal Likelihood
-    Uniform prior over just the input "a".
+    Uniform prior over the input "a" and uncertainty
 
     ARGS
         src_data: matrix of observations for a given source
@@ -411,29 +412,24 @@ class trunc_norm_post():
 
     """
 
-    def __init__(self, amin=0, amax=100, var = 1.0 ):
-        """
-
-        :param amin: minimum value of prior
-        :param amax: maximum value of prior
-        :param var: set true variance of data.
-        """
+    def __init__(self, amin=0, amax=100, var=None):
         self.xmin = amin
         self.xmax = amax
-        self.var = np.array([var]).reshape(-1)
         self.h = 101
+        self.var_arr = np.array([var]).reshape(-1)
         self.sig_arr = np.array([var]).reshape(-1)
         self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
         self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
 
     def __call__(self, src_data):
         """
-
         :param src_data: list of narrays. include whole data.
         :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
         posterior density distribution.
         """
+        assert len(src_data) == len(self.var_arr), "different number of variance for number of data sources"
         self.Data_post = src_data
+
         return self.post_dens, self.post_A_sampler, self.post_Data_sampler
 
     def log_prior_A_dens(self, a):
@@ -449,8 +445,8 @@ class trunc_norm_post():
         Lprior = np.zeros(len(a))
         max_ls = self.xmax;
         min_ls = self.xmin;
-        min_condition = np.vstack((a[:,0] >= min_ls))
-        max_condition = np.vstack((a[:,0] <= max_ls))
+        min_condition = np.vstack((a[:, 0] >= min_ls))
+        max_condition = np.vstack((a[:, 0] <= max_ls))
         prior = np.product(1.0 * (min_condition & max_condition), axis=1)
         Lprior[prior != 0] = np.log(prior[prior != 0])
         Lprior[prior == 0] = -np.inf
@@ -528,6 +524,7 @@ class trunc_norm_post():
         """
         assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
 
+        self.var = np.array(self.var_arr[src_idx]).reshape(-1)
         self.Data_i = self.Data_post[src_idx]
         self.norm_const()
         a = np.array(a).reshape(-1)
@@ -568,13 +565,14 @@ class trunc_norm_post():
         """
         assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
 
+        self.var = np.array(self.var_arr[src_idx]).reshape(-1)
+
         self.Data_i = self.Data_post[src_idx]
         Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
         pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
         pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
         pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
         return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
-
 
 def KG(mu, sig):
     """

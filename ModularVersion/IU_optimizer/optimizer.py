@@ -55,16 +55,11 @@ class Mult_Input_Uncert():
 
             """
 
-
-
         lb_x = lb_x.reshape(-1)
         ub_x = ub_x.reshape(-1)
 
         lb_a = lb_a.reshape(-1)
         ub_a = ub_a.reshape(-1)
-
-        if var_data == None:
-            var_data = np.repeat(1,len(lb_a))
 
         lb = np.concatenate((lb_x,lb_a))
         ub = np.concatenate((ub_x,ub_a))
@@ -88,7 +83,10 @@ class Mult_Input_Uncert():
             trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
             and input posterior using uniform prior and gaussian likelihood.
             """
-            post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var = var_data)
+            if var_data is None:
+                var_data = np.repeat(1,len(lb_a))
+
+            post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var= var_data )
         elif distribution is "MUSIG":
             """ 
             trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
@@ -150,7 +148,6 @@ class Mult_Input_Uncert():
             A_density, A_sampler, _ = post_maker(Data)
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
-            # W_A    = [W_A[i]*(1.0 / np.sum(W_A[i]))  for i in range(inf_src.n_srcs)]
 
             # Get KG of both simulation and Input uncertainty.
             if opt_method is "KG_DL":
