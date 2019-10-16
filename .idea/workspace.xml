@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="17aa51ba-4913-44a4-84ac-9133a6581942" name="Default Changelist" comment="">
+    <list default="true" id="17aa51ba-4913-44a4-84ac-9133a6581942" name="Default Changelist" comment="-KG works&#10;-Delta Loss works&#10;-Inference method: MUSIG works&#10;-Inference method: trunc_norm only accepts variance equals to 1. TODO&#10;-Stats log file work">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/Toy.py" beforeDir="false" afterPath="$PROJECT_DIR$/TestProblems/Toy.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -23,7 +24,7 @@
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/ModularVersion/runner_toyfun.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../ma_bo/GPyOpt/DM/inference.py" />
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RunDashboard">
@@ -38,8 +39,8 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.runner_toyfun">
-    <configuration name="__init__" type="PythonConfigurationType" factoryName="Python" temporary="true">
+  <component name="RunManager" selected="Python.test_maKG">
+    <configuration name="ma_bo (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -47,11 +48,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../ma_bo_classic_delta_loss" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/IU_optimizer/__init__.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ma_bo_classic_delta_loss/ma_bo.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -60,7 +61,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="optimizer" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="ma_bo" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -68,32 +69,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../ma_bo" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="runner_Ambulances" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="Input-Uncertainty" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_Ambulances.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ma_bo/ma_bo.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -110,11 +90,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../ma_bo_preference_learning/ModularVersion" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_toyfun.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ma_bo_preference_learning/ModularVersion/runner_toyfun.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -123,7 +103,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="utils" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="test_maKG (1)" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -131,11 +111,32 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../ma_bo_classic_delta_loss" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ma_bo_classic_delta_loss/test_maKG.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_maKG" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="Input-Uncertainty" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../ma_bo" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../ma_bo/test_maKG.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -146,11 +147,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.test_maKG" />
         <item itemvalue="Python.runner_toyfun" />
-        <item itemvalue="Python.runner_Ambulances" />
-        <item itemvalue="Python.optimizer" />
-        <item itemvalue="Python.__init__" />
-        <item itemvalue="Python.utils" />
+        <item itemvalue="Python.ma_bo (1)" />
+        <item itemvalue="Python.test_maKG (1)" />
+        <item itemvalue="Python.ma_bo" />
       </list>
     </recent_temporary>
   </component>
@@ -172,7 +173,14 @@
       <option name="project" value="LOCAL" />
       <updated>1563549407911</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="-KG works&#10;-Delta Loss works&#10;-Inference method: MUSIG works&#10;-Inference method: trunc_norm only accepts variance equals to 1. TODO&#10;-Stats log file work">
+      <created>1565895404395</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1565895404395</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TodoView">
@@ -199,7 +207,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="toy functions adapted a classes. Hopefully this change makes it easier." />
-    <option name="LAST_COMMIT_MESSAGE" value="toy functions adapted a classes. Hopefully this change makes it easier." />
+    <MESSAGE value="-KG works&#10;-Delta Loss works&#10;-Inference method: MUSIG works&#10;-Inference method: trunc_norm only accepts variance equals to 1. TODO&#10;-Stats log file work" />
+    <option name="LAST_COMMIT_MESSAGE" value="-KG works&#10;-Delta Loss works&#10;-Inference method: MUSIG works&#10;-Inference method: trunc_norm only accepts variance equals to 1. TODO&#10;-Stats log file work" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

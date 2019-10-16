@@ -1047,7 +1047,7 @@ class store_stats():
 if __name__=="__main__":
 
     xdim = 1
-    adim = 2
+    adim = 1
     dim = xdim + adim
 
     toy_func = GP_test(xamin=0, xamax=100, seed=11, x_dim=xdim, a_dim=adim)

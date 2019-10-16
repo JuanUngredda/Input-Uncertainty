@@ -5,7 +5,7 @@
 
 
 from IU_optimizer import *
-from TestProblems import toyfun, toysource
+from TestProblems import GP_test, toysource
 
 
 print("\nCalling optimizer")
@@ -23,10 +23,10 @@ Choose distribution method between:
 -MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 """
-for rp in range(100):
-    [XA], [Y], [Data] = myoptimizer(sim_fun = toyfun(), inf_src= toysource(d=1),
-                          lb_x = toyfun().xmin, ub_x = toyfun().xmax,
-                          lb_a = toyfun().amin, ub_a = toyfun().amax,
+for rp in range(1):
+    [XA], [Y], [Data] = myoptimizer(sim_fun = GP_test(), inf_src= toysource(d=1),
+                          lb_x = GP_test().xmin, ub_x = GP_test().xmax,
+                          lb_a = GP_test().amin, ub_a = GP_test().amax,
                           distribution = "trunc_norm",
                           n_fun_init = 10,
                           n_inf_init = 0,
@@ -36,5 +36,5 @@ for rp in range(100):
                           Nd = 100,
                           GP_train = True,
                           var_data= 1,
-                          opt_method="KG_DL",
+                          opt_method="KG_fixed_iu",
                           rep = rp)
