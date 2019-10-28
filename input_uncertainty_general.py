@@ -200,7 +200,7 @@ def VAR(model, xa1, chol_K=None):
 def KG(mu, sig):
     """
     Takes a set of intercepts and gradients of linear functions and returns
-    the average hieght of the max of functions over Gaussain input.
+    the average height of the max of functions over Gaussain input.
     
     ARGS
         mu: length n vector, initercepts of linear functions
@@ -209,6 +209,10 @@ def KG(mu, sig):
     RETURNS
         out: scalar value is gaussain expectation of epigraph of lin. funs
     """
+
+    assert len(mu.shape)==1; "mu must be 1d array"
+    assert len(sig.shape)==1; "sig must be 1d array
+    assert muu.shape[0]==sig.shape[0]; "mu and sig must be same length"
 
     n = len(mu)
     O = sig.argsort()
