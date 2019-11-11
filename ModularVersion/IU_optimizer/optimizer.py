@@ -102,6 +102,7 @@ class Mult_Input_Uncert():
         # Initilize GP model
         print("\ninitial design")
         XA = lhs_box(n_fun_init, lb, ub)
+        print("XA",XA)
         Y = sim_fun(XA[:,0:dim_X], XA[:,dim_X:XA.shape[1]])
         ker = GPy.kern.RBF(input_dim=lb.shape[0], variance=10000., lengthscale=(ub - lb) * 0.1, ARD=True)
 

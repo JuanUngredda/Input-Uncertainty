@@ -6,12 +6,11 @@
 
 from IU_optimizer import *
 from TestProblems import toyfun, toysource
-
+from TestProblems.experiments2d import rosenbrock
 
 print("\nCalling optimizer")
 myoptimizer = Mult_Input_Uncert()
-
-
+rosenbrock().plot()
 # # now run the optimizer 100 times and save all outputs
 """
 Choose optimsiation method between:
@@ -24,9 +23,9 @@ Choose distribution method between:
 
 """
 for rp in range(1):
-    [XA], [Y], [Data] = myoptimizer(sim_fun = toyfun(), inf_src= toysource(d=1),
-                          lb_x = toyfun().xmin, ub_x = toyfun().xmax,
-                          lb_a = toyfun().amin, ub_a = toyfun().amax,
+    [XA], [Y], [Data] = myoptimizer(sim_fun = rosenbrock(), inf_src= toysource(lb =rosenbrock().amin,ub=rosenbrock().amax,d=1),
+                          lb_x = rosenbrock().xmin, ub_x = rosenbrock().xmax,
+                          lb_a = rosenbrock().amin, ub_a = rosenbrock().amax,
                           distribution = "trunc_norm",
                           n_fun_init = 10,
                           n_inf_init = 0,
