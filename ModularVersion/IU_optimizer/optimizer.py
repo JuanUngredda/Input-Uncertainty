@@ -1,6 +1,6 @@
 from .utils import *
 import GPy
-import numpy as np
+import autograd.numpy as np
 
 
 class Mult_Input_Uncert():
@@ -20,6 +20,7 @@ class Mult_Input_Uncert():
                       Nd = 103,
                       var_data = None,
                       GP_train = True,
+                      GP_train_relearning=False,
                       opt_method = "KG_DL", rep = None):
 
         """
@@ -125,17 +126,29 @@ class Mult_Input_Uncert():
 
         # Let's get the party started!
 
+        # GP Maximum likelihood training
+        Gaussian_noise = 0.01
+        if GP_train == True:
+            print("XA", XA)
+            GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+            GPmodel.optimize_restarts(10, robust=True, verbose=True)
+            Gaussian_noise = GPmodel.Gaussian_noise.variance
+            if Gaussian_noise < 1e-9:
+                Gaussian_noise = 1e-3
+
         while XA.shape[0] + Ndata() < Budget:
             print("Iteration ", XA.shape[0] + Ndata() + 1, ":")
 
-            #GP Maximum likelihood training
-            Gaussian_noise = 0.01
-            if GP_train == True:
-                GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
-                GPmodel.optimize_restarts(10, robust=True, verbose=True)
-                Gaussian_noise = GPmodel.Gaussian_noise.variance
-                if Gaussian_noise < 1e-9:
-                    Gaussian_noise = 1e-3
+            if GP_train_relearning == True:
+
+                Gaussian_noise = 0.01
+                if GP_train == True:
+                    print("XA", XA)
+                    GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+                    GPmodel.optimize_restarts(10, robust=True, verbose=True)
+                    Gaussian_noise = GPmodel.Gaussian_noise.variance
+                    if Gaussian_noise < 1e-9:
+                        Gaussian_noise = 1e-3
 
             # Fit model to simulation data.
             GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)

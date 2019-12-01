@@ -1,2 +1,2 @@
-,DL,HP_names,HP_vars,KG,OC,X_r,file_number
-0,"[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[0.10454363 0.26064935 0.27748739 0.001     ],"[array([[0.99999245, 0.99996079]]), 0.0005908647193321841]",[0.],[0.99998553],0
+,X_r,OC,KG,DL,HP_names,HP_vars,file_number
+0,[1.57173769e-05],[0.01470326],"[array([[0.00444495, 0.23736339]]), 0.0006197471729932]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[0.1123271  0.40129245 0.23775675 0.001     ],0

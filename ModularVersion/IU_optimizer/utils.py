@@ -1,4 +1,5 @@
-import numpy as np
+import autograd.numpy as np
+from autograd import grad
 import itertools
 import pandas as pd
 from pyDOE import lhs
@@ -100,7 +101,8 @@ class store_stats():
         self.dimXA = dimXA
         self.test_func = test_func
         self.test_infr = test_infr
-        self.tp = (-1) ** max_prob
+        self.tp = (1)
+        self.dimX = dimX
         lb_X = lb[:dimX]
         ub_X = ub[:dimX]
         self.Xd = lhs_box(50000, lb_X, ub_X)
@@ -115,9 +117,9 @@ class store_stats():
 
     def __call__(self,model, Data, XA, Y, A_sample, KG = np.nan, DL = np.nan ,HP_names = None,HP_values=None):
 
+        # print("ENTEREEEEEEEEEEEEEEEEEEEED")
         X_r = self.recommended_X(model, A_sample)
-        OC = self.Opportunity_cost(X_r)
-
+        OC = self.Opportunity_cost(model, X_r)
         self.X_r.append(X_r)
         self.OC.append(OC)
         self.KG.append(KG)
@@ -164,14 +166,18 @@ class store_stats():
         M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
 
         self.M_true = M_Xd
-        topX = Xd[np.argmin(M_Xd * self.tp)]
+        topX = Xd[np.argmax(M_Xd * self.tp)]
+        # print("true Ad",Ad)
+        # print("topX",topX)
+        # plt.scatter(Xd,M_Xd)
+        # plt.show()
 
         self.topX = topX
         topXA = np.c_[[topX], [self.test_infr.f_mean]]
 
         return topXA
 
-    def Opportunity_cost(self,X_r):
+    def Opportunity_cost(self,model, X_r):
         """
 
         :param X_r: Recommended design given lhs discretisation.
@@ -186,7 +192,9 @@ class store_stats():
         self.test_infr.f_mean = np.vstack(np.array([self.test_infr.f_mean]))
         self.topX = np.vstack(np.array([self.topX]))
 
+
         val_recom = self.test_func(X_r, self.test_infr.f_mean, noise_std=0 )
+        #val_recom = np.max( self.test_func(model.X[:,:self.dimX], self.test_infr.f_mean, noise_std=0 ))
         val_opt = self.test_func(self.topX , self.test_infr.f_mean, noise_std=0 )
         OC = val_opt - val_recom
         return OC
@@ -198,6 +206,7 @@ class store_stats():
         :param A_sample: Sample from posterior input distribution to marginilise input.
         :return: recommended design, X_r. using lhs discretisation
         """
+        print("recommended X to choose...")
 
         Xd = self.Xd
         Ad = np.stack(A_sample, axis=-1)
@@ -211,7 +220,10 @@ class store_stats():
         M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
         M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
 
-        X_r = Xd[np.argmin(M_Xd * self.tp)]
+        X_r = Xd[np.argmax(M_Xd * self.tp)]
+        # print("recommended design", X_r)
+        # plt.scatter(Xd, M_Xd)
+        # plt.show()
         return X_r
 
 class MUSIG_post():
@@ -360,8 +372,12 @@ class MUSIG_post():
         :return: set of samples
         """
         assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
+        domain = domain.reshape(-1)
+        dist = dist.reshape(-1)
+
         dist = dist / np.sum(dist)
-        probabilities = dist * (1 / np.sum(dist))
+        probabilities = dist * (1.0 / np.sum(dist))
+
         val = np.random.choice(domain, n, p=probabilities)
         return val
 
@@ -544,6 +560,11 @@ class trunc_norm_post():
         assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
         dist = dist / np.sum(dist)
         probabilities = dist * (1 / np.sum(dist))
+        domain = domain.reshape(-1)
+        probabilities = probabilities.reshape(-1)
+        print("probabilities", probabilities)
+        print("n",n)
+        print("domain", domain)
         val = np.random.choice(domain, n, p=probabilities)
         return val
 
@@ -610,12 +631,12 @@ def KG(mu, sig):
     diff_PDF = pdf_C[1:] - pdf_C[:-1]
     # print(" a[A]*diff_CDF - b[A]*diff_PDF", a[A]*diff_CDF - b[A]*diff_PDF)
     # print("np.max(mu)", np.max(mu))
-    out = np.sum(a[A] * diff_CDF - b[A] * diff_PDF) - np.max(mu)
+    out = np.sum(a[A] * diff_CDF - b[A] * diff_PDF) #- np.max(mu)
 
     # print("out",out)
 
-    assert out >= -1e-10;
-    "KG cannot be negative"
+    # assert out >= -1e-10;
+    # "KG cannot be negative"
 
     return out
 
@@ -782,15 +803,20 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, Nd=101):
             # now we have weights, get the peak of reweighted GP means
             M_X_i = np.sum(M_XA * Wi, axis=1)
 
-            DL_i = np.max(M_X_i) - M_X_i[cur_topX_index]
+            # plt.scatter(Xd, M_X, label="M_X")
+            # plt.scatter(Xd, M_X_i, label="new M_X")
+            # plt.scatter(Xd[np.argmax(M_X_i)], np.max(M_X_i) ,color="red")
+            # plt.show()
 
-            assert DL_i >= 0, "Delta Loss can't be negative"
+            DL_i = np.max(M_X_i) #- M_X_i[cur_topX_index]
+
+            #assert DL_i >= 0, "Delta Loss can't be negative"
             # keep this single MC sample of DL improvement
             DL_src.append(DL_i)
 
         # get the average over DL samples for this source and save in the list.
         DL.append(np.mean(DL_src))
-
+        print("np.mean(DL_src)",np.mean(DL_src), "np.MSE(DL_src)",np.std(DL_src)/np.sqrt(len(DL_src)))
     # get the best source and its DL.
 
     topsrc = np.argmax(DL)
@@ -840,7 +866,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
     "lower must be below upper!"
 
     # optimizer initial optim
-    KG_Mc_Input.bestEVI = -10
+    KG_Mc_Input.bestEVI = -9e10
     KG_Mc_Input.bestxa = 0
 
     noiseVar = model.Gaussian_noise.variance[0]
@@ -853,7 +879,19 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
                       np.tile(Ad, (Nx, 1))])
     # Precompute the posterior mean at X_d integrated over A.
     M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
+    S_Xd = model.predict(XdAd, include_likelihood=False)[1].reshape(Nx, Na)
+
     M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
+    S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
+
+    plt.scatter(Xd,M_Xd)
+    plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
+    plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
+    plt.show()
+
+    plt.scatter(model.X[:,0],model.X[:,1])
+    plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
+    plt.show()
 
     # Precompute cholesky decomposition.
     K = model.kern.K(model.X, model.X)
@@ -862,6 +900,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
     Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, XdAd))
 
     KG_Mc_Input.calls = 0
+
 
     def KG_IU(xa):
 
@@ -893,7 +932,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
 
             # variance of new observation
             var_xa = VAR(model, xa, chol_K) + noiseVar
-            inv_sd = 1. / np.sqrt(var_xa).reshape(())
+            inv_sd = 1. / np.asarray(var_xa**0.5).reshape(())
 
             SS = SS * inv_sd
             # Finally compute KG!
@@ -905,6 +944,11 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
 
 
             return -out
+
+
+    #dKG = grad(KG_IU)
+    #print("dKG", dKG([0.5,0.5])) #Problem with var
+    #import pdb; pdb.set_trace()
 
     # Optimize that badboy! First do Ns random points, then take best Nc results
     # and do Nelder Mead starting from each of them.

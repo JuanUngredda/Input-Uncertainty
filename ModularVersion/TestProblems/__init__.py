@@ -14,4 +14,6 @@
 from .Toy import toysource, toyfun, GP_test
 from .ato_hongnelson import ATO_HongNelson
 from .Ambulance_simulator import Ambulance_Delays
-import experiments2d
+from .experiments2d import rosenbrock
+from .newsvendor import newsvendor_deterministic
+from .newsvendor import newsvendor_noisy
