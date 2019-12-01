@@ -42,7 +42,8 @@ def run(args):
     hostname = sp.check_output(['hostname'], shell=True).decode()[:-1]
 
     # IMPORT AND RUN MODULES
-    import runner_newsvendor_deterministic
+    from runner_newsvendor_known_noisy import function_caller
+    function_caller(args.k)
 
     # save something to hard drive in /res/ subfolder
     with open(this_job_savefile, 'w') as f:

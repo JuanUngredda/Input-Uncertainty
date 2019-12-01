@@ -35,7 +35,7 @@ for rp in range(1):
                           distribution = "trunc_norm",
                           n_fun_init = 10,
                           n_inf_init = 0,
-                          Budget = 35,
+                          Budget = 40,
                           Nx = 100,
                           Na = 100,
                           Nd = 100,
