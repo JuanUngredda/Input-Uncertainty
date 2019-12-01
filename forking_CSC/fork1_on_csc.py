@@ -49,6 +49,7 @@ def create_exp_dir(exp_script, base_dir="NONAME"):
     # git pull, get the commit hash and root dir TODO: strip out \n safe ?
     os.chdir(os.path.dirname(exp_script))
     host_print("current working dir: ", os.getcwd())
+    print("get_git_branch()", get_git_branch())
     host_print("git branch: " + get_git_branch())
     git_hash = sp.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode()[:-1]
     git_root = sp.check_output(['git', 'rev-parse', '--show-toplevel']).decode()[:-1]
