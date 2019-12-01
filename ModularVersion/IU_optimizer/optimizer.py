@@ -1,6 +1,6 @@
 from .utils import *
 import GPy
-import autograd.numpy as np
+import numpy as np
 
 
 class Mult_Input_Uncert():
