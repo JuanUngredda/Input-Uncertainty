@@ -28,7 +28,9 @@ Choose distribution method between:
 -MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 """
-for rp in range(1):
+N = 10
+tag = np.random.random(N)*100
+for rp in range(N):
     [XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
                           lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
                           lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
@@ -43,4 +45,4 @@ for rp in range(1):
                           GP_train_relearning = True,
                           var_data= 10,
                           opt_method="KG_DL",
-                          rep = rp )
+                          rep = tag[rp] )
