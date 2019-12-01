@@ -28,21 +28,19 @@ Choose distribution method between:
 -MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 """
-N = 10
-tag = np.random.random(N)*100
-for rp in range(N):
-    [XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
-                          lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
-                          lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
-                          distribution = "trunc_norm",
-                          n_fun_init = 10,
-                          n_inf_init = 0,
-                          Budget = 50,
-                          Nx = 100,
-                          Na = 100,
-                          Nd = 100,
-                          GP_train = True,
-                          GP_train_relearning = True,
-                          var_data= 10,
-                          opt_method="KG_DL",
-                          rep = tag[rp] )
+
+[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
+                      lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
+                      lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
+                      distribution = "trunc_norm",
+                      n_fun_init = 10,
+                      n_inf_init = 0,
+                      Budget = 50,
+                      Nx = 100,
+                      Na = 100,
+                      Nd = 100,
+                      GP_train = True,
+                      GP_train_relearning = True,
+                      var_data= 10,
+                      opt_method="KG_DL",
+                      rep = time.time()*1e3 )
