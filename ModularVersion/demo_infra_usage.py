@@ -42,7 +42,7 @@ def run(args):
     hostname = sp.check_output(['hostname'], shell=True).decode()[:-1]
 
     # IMPORT AND RUN MODULES
-    from ModularVersion import runner_newsvendor_deterministic
+    import runner_newsvendor_deterministic
 
     # save something to hard drive in /res/ subfolder
     with open(this_job_savefile, 'w') as f:
