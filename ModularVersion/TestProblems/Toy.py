@@ -138,7 +138,7 @@ class toysource():
     def __init__(self,lb =-5,ub=5,d=1):
         self.lb = lb
         self.ub = ub
-        self.f_mean = 10*np.ones(d)#np.random.random(d)
+        self.f_mean = 40*np.ones(d)#np.random.random(d)
         self.f_cov = np.repeat(np.array([10]), d)
         self.n_srcs = d
 
