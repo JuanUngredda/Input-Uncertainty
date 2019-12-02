@@ -33,18 +33,19 @@ def function_caller(rep):
 	"""
 	np.random.seed(rep)
 
-	[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
-					  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
-					  lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
-					  distribution = "trunc_norm",
-					  n_fun_init = 10,
-					  n_inf_init = 0,
-					  Budget = 50,
-					  Nx = 100,
-					  Na = 100,
-					  Nd = 100,
-					  GP_train = True,
-					  GP_train_relearning = True,
-					  var_data= 10,
-					  opt_method="KG_DL",
-					  rep = str(rep)+str(i))
+	for i in range(100):
+		[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
+						  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
+						  lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
+						  distribution = "trunc_norm",
+						  n_fun_init = 10,
+						  n_inf_init = np.int(rep*2),
+						  Budget = 50,
+						  Nx = 100,
+						  Na = 100,
+						  Nd = 100,
+						  GP_train = True,
+						  GP_train_relearning = True,
+						  var_data= 10,
+						  opt_method="KG_fixed_iu",
+						  rep = str(rep)+str(i))
