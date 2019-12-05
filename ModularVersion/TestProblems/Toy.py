@@ -52,25 +52,36 @@ RETURNS
         self.dx = x_dim
         self.da = a_dim
         self.dxa = x_dim + a_dim
-        self.xmin = np.array(xamin).reshape(-1)
-        self.xmax = np.array(xamax).reshape(-1)
+
+        self.xmin = np.zeros((self.dx,))
+        self.xmax = np.ones((self.dx,))*xamax[:self.dx]
+
+        # uncertainty parameter
+        self.amin = np.zeros((self.da,))
+        self.amax = np.ones((self.da,))*xamax[self.da:]
+
+        self.xamin = np.concatenate((self.xmin,self.amin))
+        self.xamax = np.concatenate((self.xmax,self.amax))
+
         vr = 1.
         ls = 10
         self.HP =  [vr,ls]
         self.KERNEL = GPy.kern.RBF(input_dim=self.dxa, variance=vr, lengthscale=([ls] * self.dxa), ARD=True)
         self.generate_function()
 
-    def __call__(self, xa, noise_std=1):
-        assert len(xa.shape) == 2, "xa must be an N*d matrix, each row a d point"
-        assert xa.shape[1] == self.dxa, "Test_func: wrong dimension inputed"
+    def __call__(self, x, w, noise_std=1):
+        assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+        assert len(w.shape) == 2, "x must be an N*d matrix, each row a d point"
+        assert x.shape[1] == self.dx, "Test_func: wrong dimension inputed"
+        assert w.shape[1] == self.da, "Test_func: wrong dimension inputed"
 
-        xa = self.check_input(xa)
-
-        ks = self.KERNEL.K(xa, self.XF)
+        xw = np.c_[x,w]
+        ks = self.KERNEL.K(xw, self.XF)
         out = np.dot(ks, self.invCZ)
 
-        E = np.random.normal(0, noise_std, xa.shape[0])
-
+        #print("noise_std",noise_std)
+        E = np.random.normal(0, noise_std, xw.shape[0])
+        #rint("E",E)
         return (out.reshape(-1, 1) + E.reshape(-1, 1))
 
     def generate_function(self):

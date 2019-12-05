@@ -1,3 +1,0 @@
-,X_r,OC,KG,DL,HP_names,HP_vars,file_number
-0,[0.00143907],[[73.88850971]],"[array([[77.29757984, 38.35704517]]), 80.40428750798193]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[1.02416508e+04 3.14666594e+02 1.10576206e+01 3.73609568e-04],1968
-1,[33.3750224],[[7.24503654]],"[array([[13.88427476, 38.71918899]]), 19.36211991277547]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[3.70082890e+03 5.29729185e-01 1.24045872e+00 5.54794115e+03],1968

@@ -29,6 +29,10 @@ Choose distribution method between:
 
 """
 
+
+"""TO DO: IMPLEMENT LEARNING NOISE https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf"""
+
+
 [XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
                       lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
                       lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,

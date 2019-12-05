@@ -225,7 +225,7 @@ class store_stats():
         # plt.show()
         return X_r
 
-class MUSIG_post():
+class MU_s_T_post():
     """
     Given i.i.d observations, builds a posterior density and a sampler
     (which can then be used with Delta Loss).
@@ -405,6 +405,191 @@ class MUSIG_post():
         pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
         return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
 
+class MUSIG_post():
+    """
+    Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Uniform prior over the input "a" and uncertainty
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self, amin=0, amax=100):
+        self.xmin = amin
+        self.xmax = amax
+        self.h = 101
+        self.sig_arr, self.dltsig = np.linspace(1e-3, 20, self.h, retstep=True)
+        self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
+        self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
+
+    def __call__(self, src_data):
+        """
+
+        :param src_data: list of narrays. include whole data.
+        :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
+        posterior density distribution.
+        """
+        self.Data_post = src_data
+        return self.post_dens, self.post_A_sampler, self.post_Data_sampler
+
+    def log_prior_A_dens(self, a):
+        """
+        log prior using uniform distribution
+        :param a: value of input narray x sigma narray
+        :return:  value of logprior
+        """
+        assert len(a.shape) == 2;
+        "a must be a matrix"
+        assert a.shape[1] == 2;
+        "a must have 2 columns"
+        Lprior = np.zeros(len(a))
+        max_ls = self.xmax;
+        min_ls = self.xmin;
+        prior = np.product(1.0 * ((a >= min_ls) & (a <= max_ls)), axis=1)
+        Lprior[prior != 0] = np.log(prior[prior != 0])
+        Lprior[prior == 0] = -np.inf
+        return Lprior
+
+    def log_lhood_d_i(self, a, data_i):
+        """
+        log likelihood of normal distribution
+        :param a: value of input narray x sigma narray
+        :param data_i: data in narray
+        :return: log likelihood narray
+        """
+        assert len(a.shape) == 2, "a must be a matrix"
+        assert a.shape[1] == 2, "a must have 2 columns"
+        mu = a[:, 0]
+        var = a[:, 1]
+        Llikelihood_i = (-1.0 / 2) * (1.0 / var) * ((data_i - mu) ** 2) - np.log(np.sqrt(2 * np.pi * var))
+        return Llikelihood_i
+
+    def norm_const(self):
+        """
+        calculates normalisation constant. Particularly useful to normalise
+        individual values of a from post_dens_unnormalised
+        :return: normalisation constant of posterior distribution
+        """
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        full_post = self.post_dens_unnormalised(Dom_crssprd)
+        self.nrm_cnst = np.sum(full_post) * self.dltsig * self.dlta
+
+    def cross_prod(self, arr_1, arr_2):
+        """
+        cartesian product between arrays. aux function
+        :param arr_1: array
+        :param arr_2: array
+        :return: cartesian product ndarray
+        """
+        arr_1 = np.array(arr_1).reshape(-1)
+        Dom_sets = [arr_1, arr_2]
+        Dom_crssprd = np.array([list(i) for i in itertools.product(*Dom_sets)])
+        return Dom_crssprd
+
+    def post_dens_unnormalised(self, a):
+        """
+        # This implementation style means that even if there is no data,
+        # the second summation term will be 0 and only the prior will contribute
+        # i.e. this style uses one method for both prior and posterior, prior is NOT a special case.
+        :param a: value of a
+        :return: joint pdf calculated in a
+        """
+        log_lhood = np.sum([self.log_lhood_d_i(a, d_i) for d_i in self.Data_i], axis=0)
+        log_post = self.log_prior_A_dens(a) + log_lhood
+        self.post = np.exp(log_post)
+        return self.post
+
+    def marg_post_dens(self, a):
+        """
+        marginilise posterior joint distribution of input A and variance sigma of normal
+        distribution
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        joint_post = self.post_dens_unnormalised(a)
+        joint_post = joint_post
+
+        print("joint_post",joint_post.shape)
+        a = np.linspace(self.xmin, self.xmax, 5000)
+        X, Y =np.meshgrid(a, self.sig_arr)
+        plt.contourf(X,Y,joint_post.reshape(len(self.sig_arr), self.Na))
+        plt.show()
+        return joint_post
+
+    def post_dens(self, a, src_idx):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        self.norm_const()
+        a = np.array(a).reshape(-1)
+        self.Na = len(a)
+        Dom_crssprd = self.cross_prod(a, self.sig_arr)
+        pdf_post = self.marg_post_dens(Dom_crssprd)
+        return pdf_post / self.nrm_cnst
+
+    def sampler(self, n, dist, domain):
+        """
+
+        :param n: number of samples
+        :param dist: pdf of distribution. normalised inside the function
+        :param domain: discreatised domain
+        :return: set of samples
+        """
+        assert not len(dist) == 1, "Trying to generate samples from scalar. Hint: Insert pdf"
+        domain = domain.reshape(-1)
+        dist = dist.reshape(-1)
+
+        dist = dist / np.sum(dist)
+        probabilities = dist * (1.0 / np.sum(dist))
+
+        val = np.random.choice(domain, n, p=probabilities)
+        return val
+
+    def post_A_sampler(self, n, src_idx):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+        DomA = np.linspace(self.xmin, self.xmax, 5000)
+        Dist = self.post_dens(DomA, src_idx)
+        return self.sampler(n, dist=Dist, domain=DomA)
+
+    def post_Data_sampler(self, n, src_idx):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        self.Data_i = self.Data_post[src_idx]
+        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
+        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
+        pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
+        return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
 
 class trunc_norm_post():
     """
@@ -878,19 +1063,20 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
                       np.tile(Ad, (Nx, 1))])
     # Precompute the posterior mean at X_d integrated over A.
     M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
-    # S_Xd = model.predict(XdAd, include_likelihood=False)[1].reshape(Nx, Na)
+    S_Xd = model.predict(XdAd, include_likelihood=False)[1].reshape(Nx, Na)
+
 
     M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
-    # S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
+    S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
 
-    # plt.scatter(Xd,M_Xd)
-    # plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
-    # plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
-    # plt.show()
-    #
-    # plt.scatter(model.X[:,0],model.X[:,1])
-    # plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
-    # plt.show()
+    plt.scatter(Xd,M_Xd)
+    plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
+    plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
+    plt.show()
+
+    plt.scatter(model.X[:,0],model.X[:,1])
+    plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
+    plt.show()
 
     # Precompute cholesky decomposition.
     K = model.kern.K(model.X, model.X)

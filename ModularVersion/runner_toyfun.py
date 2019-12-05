@@ -5,7 +5,7 @@
 
 
 from IU_optimizer import *
-from TestProblems import toyfun, toysource
+from TestProblems import GP_test, toysource
 
 
 print("\nCalling optimizer")
@@ -24,17 +24,18 @@ Choose distribution method between:
 
 """
 for rp in range(1):
-    [XA], [Y], [Data] = myoptimizer(sim_fun = toyfun(), inf_src= toysource(d=1),
-                          lb_x = toyfun().xmin, ub_x = toyfun().xmax,
-                          lb_a = toyfun().amin, ub_a = toyfun().amax,
-                          distribution = "trunc_norm",
+    [XA], [Y], [Data] = myoptimizer(sim_fun = GP_test(), inf_src= toysource(d=1),
+                          lb_x = GP_test().xmin, ub_x = GP_test().xmax,
+                          lb_a = GP_test().amin, ub_a = GP_test().amax,
+                          distribution = "MU_t_S",
                           n_fun_init = 10,
                           n_inf_init = 0,
                           Budget = 100,
                           Nx = 101,
                           Na = 100,
                           Nd = 100,
-                          GP_train = True,
+                          GP_train = False,
                           var_data= 1,
+                          Gpy_Kernel = GP_test().KERNEL ,
                           opt_method="KG_fixed_iu",
                           rep = rp)

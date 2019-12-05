@@ -11,7 +11,7 @@ class Mult_Input_Uncert():
     def __call__(self, sim_fun, inf_src ,
                       lb_x, ub_x,
                       lb_a, ub_a,
-                      distribution="MUSIG",
+                      distribution="MU_t_S",
                       n_fun_init = 10,
                       n_inf_init = 0,
                       Budget = 9,
@@ -21,6 +21,7 @@ class Mult_Input_Uncert():
                       var_data = None,
                       GP_train = True,
                       GP_train_relearning=False,
+                      Gpy_Kernel = None,
                       opt_method = "KG_DL", rep = None):
 
         """
@@ -41,6 +42,7 @@ class Mult_Input_Uncert():
         :param Na: int, sample size for MC over A
         :param Nd: int, sample size for Delta Loss
         :param var_data: int, True variance of Data for inference in distribution "KG_fixed_iu".
+        :param Gpy_Kernel: GPy object, include GPy kernel with learnt hyperparameters.
         :param GP_train: Bool. True, Hyperparameters are trained in every iteration. False, uses pre-set parameters
         :param opt_method: Method for IU-optimisation:
                -"KG_DL": Compares Knowledge Gradient and Delta Loss for every iteration of the algorithm.
@@ -88,10 +90,15 @@ class Mult_Input_Uncert():
                 var_data = np.repeat(1,len(lb_a))
 
             post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var= var_data )
+        elif distribution is "MU_t_S":
+            """ 
+            MUSIG_post: marginalises uncertainty over the variance
+            """
+            post_maker = MU_s_T_post(amin=inf_src.lb, amax=inf_src.ub)
+
         elif distribution is "MUSIG":
             """ 
-            trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
-            and input posterior using uniform prior and gaussian likelihood.
+            MUSIG_post: joint distribution mu and sigma given data. Same MUSIG_post but without marganilising variance
             """
             post_maker = MUSIG_post(amin=inf_src.lb, amax=inf_src.ub)
         else:
@@ -106,6 +113,14 @@ class Mult_Input_Uncert():
         print("XA",XA)
         Y = sim_fun(XA[:,0:dim_X], XA[:,dim_X:XA.shape[1]])
         ker = GPy.kern.RBF(input_dim=lb.shape[0], variance=10000., lengthscale=(ub - lb) * 0.1, ARD=True)
+        ker.lengthscale.constrain_bounded(0, np.max((ub - lb) )* 1/1.5)
+
+
+        if Gpy_Kernel != None:
+            print("true jeje")
+            ker = Gpy_Kernel
+            print("ker", ker )
+
 
         # Initilize input uncertainty data via round robin allocation
         dim_A = lb.shape[0] - dim_X
@@ -132,6 +147,7 @@ class Mult_Input_Uncert():
             print("XA", XA)
             GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
             GPmodel.optimize_restarts(10, robust=True, verbose=True)
+            GPmodel.Gaussian_noise.variance.constrain_bounded(1e-2, 5)
             Gaussian_noise = GPmodel.Gaussian_noise.variance
             if Gaussian_noise < 1e-9:
                 Gaussian_noise = 1e-3
@@ -146,6 +162,7 @@ class Mult_Input_Uncert():
                     print("XA", XA)
                     GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
                     GPmodel.optimize_restarts(10, robust=True, verbose=True)
+                    GPmodel.Gaussian_noise.variance.constrain_bounded(1e-3, 5)
                     Gaussian_noise = GPmodel.Gaussian_noise.variance
                     if Gaussian_noise < 1e-9:
                         Gaussian_noise = 1e-3

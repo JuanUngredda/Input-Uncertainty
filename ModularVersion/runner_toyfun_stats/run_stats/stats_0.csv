@@ -1,2 +1,6 @@
 ,X_r,OC,KG,DL,HP_names,HP_vars,file_number
-0,[1.57173769e-05],[0.01470326],"[array([[0.00444495, 0.23736339]]), 0.0006197471729932]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[0.1123271  0.40129245 0.23775675 0.001     ],0
+0,[83.74593351],[[1.14750282]],"[array([[17.88767394,  0.06105282]]), 0.8804100822066946]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.    0.01],0
+1,[83.7365349],[[1.14754285]],"[array([[92.39949228,  4.20833816]]), 0.8797030586646976]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.    0.01],0
+2,[91.36292691],[[0.86978899]],"[array([[99.01207766,  3.07279865]]), 1.2956700729679134]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.    0.01],0
+3,[89.11245525],[[1.01366882]],"[array([[80.94450216,  0.98337917]]), 1.2891939368399101]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.    0.01],0
+4,[87.10193222],[[1.09571913]],"[array([[71.26641106,  2.00351166]]), 1.5051449434555837]","[nan, nan]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.    0.01],0

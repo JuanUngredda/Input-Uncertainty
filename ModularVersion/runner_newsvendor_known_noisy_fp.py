@@ -33,13 +33,14 @@ def function_caller(rep):
 	"""
 	np.random.seed(rep)
 
-	for i in range(100):
+	proportions = [18, 30, 36, 10, 12, 24,  6, 38,  4, 37, 14, 39,  9, 33,  7]
+	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
 						  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
 						  lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
 						  distribution = "trunc_norm",
 						  n_fun_init = 10,
-						  n_inf_init = np.int(rep*2),
+						  n_inf_init = i,
 						  Budget = 50,
 						  Nx = 100,
 						  Na = 100,
@@ -48,4 +49,4 @@ def function_caller(rep):
 						  GP_train_relearning = True,
 						  var_data= 10,
 						  opt_method="KG_fixed_iu",
-						  rep = str(rep)+str(i))
+						  rep = str(i) +"_"+str(rep))
