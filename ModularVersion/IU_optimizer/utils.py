@@ -1063,20 +1063,20 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
                       np.tile(Ad, (Nx, 1))])
     # Precompute the posterior mean at X_d integrated over A.
     M_Xd = model.predict(XdAd)[0].reshape(Nx, Na)
-    S_Xd = model.predict(XdAd, include_likelihood=False)[1].reshape(Nx, Na)
+    # S_Xd = model.predict(XdAd, include_likelihood=False)[1].reshape(Nx, Na)
 
 
     M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
-    S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
-
-    plt.scatter(Xd,M_Xd)
-    plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
-    plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
-    plt.show()
-
-    plt.scatter(model.X[:,0],model.X[:,1])
-    plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
-    plt.show()
+    # S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
+    #
+    # plt.scatter(Xd,M_Xd)
+    # plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
+    # plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
+    # plt.show()
+    #
+    # plt.scatter(model.X[:,0],model.X[:,1])
+    # plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
+    # plt.show()
 
     # Precompute cholesky decomposition.
     K = model.kern.K(model.X, model.X)
