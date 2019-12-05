@@ -8,8 +8,7 @@ from IU_optimizer import *
 from TestProblems import GP_test, toysource
 
 
-print("\nCalling optimizer")
-myoptimizer = Mult_Input_Uncert()
+
 
 
 # # now run the optimizer 100 times and save all outputs
@@ -23,19 +22,25 @@ Choose distribution method between:
 -MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 """
-for rp in range(1):
-    [XA], [Y], [Data] = myoptimizer(sim_fun = GP_test(), inf_src= toysource(d=1),
-                          lb_x = GP_test().xmin, ub_x = GP_test().xmax,
-                          lb_a = GP_test().amin, ub_a = GP_test().amax,
-                          distribution = "MU_t_S",
-                          n_fun_init = 10,
-                          n_inf_init = 0,
-                          Budget = 100,
-                          Nx = 101,
-                          Na = 100,
-                          Nd = 100,
-                          GP_train = False,
-                          var_data= 1,
-                          Gpy_Kernel = GP_test().KERNEL ,
-                          opt_method="KG_fixed_iu",
-                          rep = rp)
+def function_caller(rep):
+    print("\nCalling optimizer")
+    myoptimizer = Mult_Input_Uncert()
+    np.random.seed(rep)
+
+    for i in range(0, 90, 5):
+        [XA], [Y], [Data] = myoptimizer(sim_fun = GP_test(), inf_src= toysource(d=1),
+                              lb_x = GP_test().xmin, ub_x = GP_test().xmax,
+                              lb_a = GP_test().amin, ub_a = GP_test().amax,
+                              distribution = "MU_t_S",
+                              n_fun_init = 10,
+                              n_inf_init = i,
+                              Budget = 100,
+                              Nx = 101,
+                              Na = 100,
+                              Nd = 100,
+                              GP_train = False,
+                              var_data= 1,
+                              Gpy_Kernel = GP_test().KERNEL ,
+                              opt_method="KG_fixed_iu",
+                              rep = str(i) +"_"+str(rep))
+
