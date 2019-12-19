@@ -33,7 +33,7 @@ def function_caller(rep):
 	"""
 	np.random.seed(rep)
 
-	proportions = [18, 30, 36, 10, 12, 24,  6, 38,  4, 37, 14, 39,  9, 33,  7]
+	proportions = [16, 22, 20,  6, 32, 28, 18, 26, 29, 12, 24, 34, 30]
 	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
 						  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,

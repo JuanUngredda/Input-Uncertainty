@@ -66,6 +66,8 @@ def writeCSV_run_stats():
             data = func(*args, **kwargs)
             gen_file = pd.DataFrame.from_dict(data)
             cwd = os.getcwd()
+            print("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+            print("str(data['file_number'])",str(data['file_number']))
             path = cwd + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
             gen_file.to_csv(path_or_buf=path)
             return data

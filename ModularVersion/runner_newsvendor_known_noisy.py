@@ -33,6 +33,7 @@ def function_caller(rep):
 	"""
 	np.random.seed(rep)
 
+
 	[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
 					  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
 					  lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
@@ -47,4 +48,4 @@ def function_caller(rep):
 					  GP_train_relearning = True,
 					  var_data= 10,
 					  opt_method="KG_DL",
-					  rep = str(rep)+str(i))
+					  rep = str(rep))

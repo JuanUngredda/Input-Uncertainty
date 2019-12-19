@@ -127,7 +127,7 @@ class Mult_Input_Uncert():
         alloc = np.arange(n_inf_init) % dim_A
         alloc = [np.sum(alloc == i) for i in range(dim_A)]
         Data = [inf_src(n=alloc[i], src=i) for i in range(dim_A)]
-
+        print("DATA", Data)
         # this can be called at any time to get the number of Data collected
         Ndata = lambda: np.sum([d_src.shape[0] for d_src in Data])
 
@@ -177,6 +177,7 @@ class Mult_Input_Uncert():
             # be samples from posterior over A! Don't use linspace!
 
             A_density, A_sampler, _ = post_maker(Data)
+            print("inf_src.n_srcs",inf_src.n_srcs)
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
 
