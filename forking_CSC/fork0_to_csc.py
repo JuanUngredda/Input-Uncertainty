@@ -114,9 +114,11 @@ ALL_CSC_NAMES = ["rilyeno", "torta", "adobo", "bulalo", "kinilaw", "okoy",
 
 # default list uses all computers, but some may need to be removed.
 # working with names is a bitch, instead use numbers (tmux panes).
-U = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 16]
+#U = [0]
 #U = [0,2,3,4,5,6,7,8]
-# U = [0,1,2,3,4,6,7,9,10,12,13,14,15,16]
+#python fork0_to_csc.py /home/rawsys/matjiu/BOPL_Cornell-Warwick/experiments/control.py 14 --first_fork adobo --basedir /home/maths/phrnaj/MCBO_results/ --conda TFgpu
+
+U = [0,1,3,4,7,8,9,12,13,14,15, 16] #[0,1,4,7,8,9,14, 15]
 
 CSC_NAMES = [ALL_CSC_NAMES[i] for i in U]
 
