@@ -11,7 +11,8 @@
 # this is really useful when there are lots of dirs and subdirs
 # because you can  avoid `from dir1.dir2.dir3.dir4 import myfun`
 
-from .Toy import toysource, toyfun, GP_test
+#from .Toy import toysource, toyfun, GP_test
+from .Toy import Information_Source
 from .ato_hongnelson import ATO_HongNelson
 from .Ambulance_simulator import Ambulance_Delays
 from .experiments2d import rosenbrock

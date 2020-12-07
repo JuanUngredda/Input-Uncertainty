@@ -1,5 +1,6 @@
 import numpy as np
 import GPy
+import time
 
 class testfunction(object):
     def __init__(self):
@@ -144,19 +145,56 @@ class toyfun(testfunction):
 
         return (y)
 
-class toysource():
+
+class Information_Source():
+    def __init__(self, Distribution=[] , lb=-5, ub=5, d=1):
+        # print("Distribution",len(Distribution) )
+        # print("len(np.array(lb).reshape(-1)",len(np.array(lb).reshape(-1)))
+        assert len(Distribution) > 0, "include Information sources for each source s"
+        self.lb = lb
+        self.ub = ub
+        self.Distribution = Distribution
+        # self.true_params = []
+        # for dist in Distribution:
+        #     self.true_params.append(np.fromiter(dist[0].__dict__["kwds"].values(), dtype=float))
+        #print("self.true_params ", self.true_params)
+        self.n_srcs = d
+
+    def __call__(self, n, src, *args, **kwargs):
+        return self.Distribution[src].rvs(n) #self.f_mean[src] + np.random.normal(size=(n)) * np.sqrt(self.f_cov[src])
+
+
+class Normal_Information_Source():
 
     def __init__(self,lb =-5,ub=5,d=1):
         self.lb = lb
         self.ub = ub
         self.f_mean = 40*np.ones(d)#np.random.random(d)
         self.f_cov = np.repeat(np.array([10]), d)
+        self.f_sigma = np.sqrt(self.f_cov)
+        self.true_params = np.concatenate((self.f_mean, self.f_cov))
+        print("self.true_params ",self.true_params )
         self.n_srcs = d
 
     def __call__(self, n, src, *args,**kwargs):
+        print("n", n, "src", src)
         return self.f_mean[src] + np.random.normal(size=(n))*np.sqrt(self.f_cov[src])
 
 
 
+class Gamma_Information_Source():
 
+    def __init__(self,lb =-5,ub=5,d=1):
+        self.lb = lb
+        self.ub = ub
+        self.f_mean = 40*np.ones(d)#np.random.random(d)
+        self.f_cov = np.repeat(np.array([10]), d)
+        self.f_sigma = np.sqrt(self.f_cov)
+        self.true_params = np.concatenate((self.f_mean, self.f_cov))
+        print("self.true_params ",self.true_params )
+        self.n_srcs = d
+
+    def __call__(self, n, src, *args,**kwargs):
+        print("n", n, "src", src)
+        return self.f_mean[src] + np.random.normal(size=(n))*np.sqrt(self.f_cov[src])
 

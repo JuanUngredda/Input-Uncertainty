@@ -63,10 +63,10 @@ class Mult_Input_Uncert():
 
         lb_a = lb_a.reshape(-1)
         ub_a = ub_a.reshape(-1)
-
+        # print("ub_x,ub_a",ub_x,ub_a)
         lb = np.concatenate((lb_x,lb_a))
         ub = np.concatenate((ub_x,ub_a))
-
+        # print("lb", lb, "ub", ub)
         dim_X = sim_fun.dx
 
         lb = lb.reshape(-1)
@@ -100,7 +100,8 @@ class Mult_Input_Uncert():
             """ 
             MUSIG_post: joint distribution mu and sigma given data. Same MUSIG_post but without marganilising variance
             """
-            post_maker = MUSIG_post(amin=inf_src.lb, amax=inf_src.ub)
+            post_maker = Gaussian_musigma_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
+                                                    lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
         else:
             raise NotImplementedError
 
@@ -123,7 +124,9 @@ class Mult_Input_Uncert():
 
 
         # Initilize input uncertainty data via round robin allocation
-        dim_A = lb.shape[0] - dim_X
+        dim_A =  inf_src.n_srcs #lb.shape[0] - dim_X
+        # print("lb.shape[0], dim_X", lb.shape[0] ,dim_X)
+        # raise
         alloc = np.arange(n_inf_init) % dim_A
         alloc = [np.sum(alloc == i) for i in range(dim_A)]
         Data = [inf_src(n=alloc[i], src=i) for i in range(dim_A)]
@@ -168,6 +171,7 @@ class Mult_Input_Uncert():
                         Gaussian_noise = 1e-3
 
             # Fit model to simulation data.
+
             GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)
 
             # Discretize X by lhs and discretize A with posterior samples as required.
@@ -177,12 +181,17 @@ class Mult_Input_Uncert():
             # be samples from posterior over A! Don't use linspace!
 
             A_density, A_sampler, _ = post_maker(Data)
-            print("inf_src.n_srcs",inf_src.n_srcs)
+            # print("inf_src.n_srcs",inf_src.n_srcs)
+
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
+            # print("A_grid[i]",A_grid[0][np.argmin(W_A)])
+            # print("W_A", np.min(W_A))
 
             # Get KG of both simulation and Input uncertainty.
+
             if opt_method is "KG_DL":
+
                 XA,Y,Data = self.KG_DL_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)
@@ -226,13 +235,14 @@ class Mult_Input_Uncert():
         topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
         print("Best is simulator: ", topxa, topKG)
 
-        topsrc, topDL = DeltaLoss(GPmodel, Data, X_grid, A_grid, W_A, post_maker, Nd)
+        topsrc, topDL = DeltaLoss(GPmodel, Data, X_grid, A_grid, W_A, post_maker,  lb, ub, Nd)
         print("Best is info source: ", topsrc, topDL)
 
         stats(model = GPmodel,
               Data = Data,
               XA = XA,
               Y = Y,
+              Decision = topDL>topKG,
               A_sample = A_grid,
               KG = [topxa, topKG],
               DL = [topsrc, topDL],
@@ -243,7 +253,7 @@ class Mult_Input_Uncert():
             # if simulation is better
             print("topxa", topxa)
 
-            print("topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]]",topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]])
+            # print("topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]]",topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]])
             new_y = func_caller(func = sim_fun, x = topxa[:, 0:dim_X], a = topxa[:, dim_X:XA.shape[1]])
 
             XA = np.vstack([XA, topxa])

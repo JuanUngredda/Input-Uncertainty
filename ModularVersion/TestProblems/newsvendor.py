@@ -97,8 +97,86 @@ class newsvendor_noisy(testfunction):
             xc = np.concatenate((x.reshape(-1,1), c.reshape(-1,1)),axis=1)
             out = self.p * np.min(xc,axis=1).reshape(-1) - self.l * x.reshape(-1)
 
-
             return out.reshape(-1,1)
+
+
+class newsvendor_noisy_2(testfunction):
+    def __init__(self,True_Demand=None, Assumed_Demand=None, dimx=1, dima =2):
+        dim = dimx + dima
+        self.xamin = np.array([0,0,1e-21])
+        self.xamax = np.array([100,100,40])
+        # print("self.xamin",self.xamin, "self.xamax",self.xamax)
+        self.dx = dimx
+        self.da = dima
+        self.xmin = self.xamin[:self.dx]
+        self.xmax = self.xamax[:self.dx]
+        self.amin = self.xamin[self.dx:]
+        self.amax = self.xamax[self.dx:]
+        # print("self.xmin ",self.xmin ,"self.xmax",self.xmax,"self.amin", self.amin, "self.amax", self.amax)
+        self.True_Demand = True_Demand
+        MC_samples = 10000000
+        print("self.True_Demand",self.True_Demand)
+        self.True_Demand_Samples =  self.True_Demand[0].rvs(MC_samples).reshape(-1)
+
+        self.Assumed_Demand = Assumed_Demand
+        self.p = 5
+        self.l = 3
+
+        # import matplotlib.pyplot as plt
+        # x=np.linspace(0,100,100)
+        # vals = self.true_performance(np.atleast_2d(x).T)
+        # plt.plot(x, vals)
+        # plt.show()
+        # raise
+
+
+    def true_performance(self, x):
+        x = np.atleast_2d(x)
+
+        assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+        assert x.shape[1] == self.dx, "Test_func: wrong x input dimension"
+
+        mean_repetitions = []
+
+        Demand = self.True_Demand_Samples
+
+        XDemand = np.array(np.meshgrid(x, Demand))
+        Benefit = self.p * np.min(XDemand, axis=0) - self.l * x.reshape(-1)
+        Expected_Benefit = np.mean(Benefit, axis=0)
+
+        return Expected_Benefit
+
+    def __call__(self, x, u, true_performance_flag=False, *args, **kwargs):
+
+        if true_performance_flag:
+            assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert x.shape[1] == self.dx, "Test_func: wrong x input dimension"
+            return self.true_performance(x).reshape(-1, 1)
+
+        else:
+            assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert len(u.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert x.shape[1] == self.dx, "Test_func: wrong x input dimension"
+            assert u.shape[1] == self.da, "Test_func: wrong u input dimension"
+
+
+            mean = u[:,0]
+            sig = np.sqrt(u[:,1])
+            reps = 320
+            rev = []
+            print("")
+            for i in range(reps):
+                c = self.Assumed_Demand[0](mean.reshape(-1),np.ones(1)*sig,(1,x.shape[0])).reshape(-1)
+                xc = np.concatenate((x.reshape(-1,1), c.reshape(-1,1)),axis=1)
+                #print("x",xc)
+                #print("np.min(xc,axis=1)",np.min(xc,axis=1))
+                out = self.p * np.min(xc,axis=1).reshape(-1) - self.l * x.reshape(-1)
+                rev.append(out)
+            # print("mean", np.mean(rev,axis=0), "std", np.std(rev,axis=0), "MSE",np.std(rev,axis=0)/reps )
+            # print("max", np.max(np.std(rev,axis=0)/reps ),"min", np.min(np.std(rev,axis=0)/reps ))
+            results = np.mean(rev, axis=0)
+            # raise
+            return results.reshape(-1,1)
 
 
 def main():
