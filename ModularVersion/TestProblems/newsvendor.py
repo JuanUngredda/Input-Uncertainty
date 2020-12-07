@@ -138,12 +138,18 @@ class newsvendor_noisy_2(testfunction):
 
         mean_repetitions = []
 
-        Demand = self.True_Demand_Samples
+        Partition = 100
+        Expected_Benefit_d = []
+        for d in np.split(self.True_Demand_Samples, Partition):
+            Demand = d #self.True_Demand_Samples
 
-        XDemand = np.array(np.meshgrid(x, Demand))
-        Benefit = self.p * np.min(XDemand, axis=0) - self.l * x.reshape(-1)
-        Expected_Benefit = np.mean(Benefit, axis=0)
-
+            XDemand = np.array(np.meshgrid(x, Demand))
+            Benefit = self.p * np.min(XDemand, axis=0) - self.l * x.reshape(-1)
+            Expected_Benefit_d.append(np.mean(Benefit, axis=0))
+        Expected_Benefit = np.mean(Expected_Benefit_d,axis=0)
+        # print("x",x)
+        # print("Expected_Benefit",Expected_Benefit)
+        # raise
         return Expected_Benefit
 
     def __call__(self, x, u, true_performance_flag=False, *args, **kwargs):
