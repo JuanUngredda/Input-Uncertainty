@@ -74,6 +74,7 @@ def writeCSV_run_stats():
             cwd = os.getcwd()
 
             path = cwd + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
+            print("path", path)
             gen_file.to_csv(path_or_buf=path)
             return data
         return wrapcsv
