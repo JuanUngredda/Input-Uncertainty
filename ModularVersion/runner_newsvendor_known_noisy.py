@@ -68,4 +68,4 @@ def function_caller(rep):
 					  rep = str(rep))
 
 
-# function_caller(rep=1)
+function_caller(rep=1)

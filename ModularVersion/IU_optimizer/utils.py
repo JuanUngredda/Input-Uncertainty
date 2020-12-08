@@ -54,8 +54,11 @@ class writeCSV_time_stats():
 
         data = self.time_data
         gen_file = pd.DataFrame.from_dict(data)
-        cwd = os.getcwd()
-        path = cwd + "/" + self.folder + '/time_'+ self.function.__name__ + '.csv'
+        script_dir = os.path.dirname(__file__)
+        project_path = script_dir[:-27]
+        if not os.path.exists(project_path +"RESULTS" +  "/" + self.folder):
+            os.makedirs(project_path +"RESULTS" +  "/" + self.folder)
+        path = project_path +"RESULTS" +  "/" + self.folder + '/time_'+ self.function.__name__ + '.csv'
         gen_file.to_csv(path_or_buf=path)
         return result
 
@@ -71,12 +74,14 @@ def writeCSV_run_stats():
         def wrapcsv(*args, **kwargs):
             data = func(*args, **kwargs)
             gen_file = pd.DataFrame.from_dict(data)
-            cwd = os.getcwd()
+            script_dir = os.path.dirname(__file__)
+            project_path = script_dir[:-27]
 
-            path = cwd + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
+            if not os.path.exists(project_path + "RESULTS" + "/" + folder):
+                os.makedirs(project_path + "RESULTS" + "/" + folder)
+            path = project_path +"RESULTS" + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
             print("path", path)
-            assert 5 == 3, str(path)
-            raise
+
             gen_file.to_csv(path_or_buf=path)
             return data
         return wrapcsv
