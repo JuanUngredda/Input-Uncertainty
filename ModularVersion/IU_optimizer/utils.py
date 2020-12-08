@@ -75,6 +75,8 @@ def writeCSV_run_stats():
 
             path = cwd + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
             print("path", path)
+            assert 5 == 3, str(path)
+            raise
             gen_file.to_csv(path_or_buf=path)
             return data
         return wrapcsv

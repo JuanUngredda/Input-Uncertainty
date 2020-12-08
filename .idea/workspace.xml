@@ -4,7 +4,6 @@
     <list default="true" id="158df6c8-8553-4a75-8813-78fa6a1bd35d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_newsvendor_known_noisy.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_newsvendor_known_noisy.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -167,7 +166,7 @@
       <workItem from="1606911672276" duration="65000" />
       <workItem from="1607091038319" duration="17134000" />
       <workItem from="1607262440726" duration="19893000" />
-      <workItem from="1607290224513" duration="17172000" />
+      <workItem from="1607290224513" duration="18552000" />
     </task>
     <servers />
   </component>
