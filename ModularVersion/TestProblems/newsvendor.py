@@ -172,7 +172,7 @@ class newsvendor_noisy_2(testfunction):
             rev = []
             print("")
             for i in range(reps):
-                c = self.Assumed_Demand[0](mean.reshape(-1),np.ones(1)*sig,(1,x.shape[0])).reshape(-1)
+                c = self.Assumed_Demand[0](mean.reshape(-1),np.zeros(1)*sig,(1,x.shape[0])).reshape(-1)
                 xc = np.concatenate((x.reshape(-1,1), c.reshape(-1,1)),axis=1)
                 #print("x",xc)
                 #print("np.min(xc,axis=1)",np.min(xc,axis=1))

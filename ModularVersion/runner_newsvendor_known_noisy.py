@@ -50,7 +50,6 @@ def function_caller(rep):
 	Simulator = newsvendor_noisy_2(True_Demand = True_Input_distributions, Assumed_Demand=Assumed_Input_Distributions )
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb =Simulator.amin,ub=Simulator.amax,d=1)
 
-	np.random.seed(rep)
 	[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
 					  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
 					  lb_a = Simulator.amin, ub_a = Simulator.amax,
@@ -68,4 +67,4 @@ def function_caller(rep):
 					  rep = str(rep))
 
 
-#function_caller(rep=1)
+function_caller(rep=1)

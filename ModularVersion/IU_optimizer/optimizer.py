@@ -140,7 +140,7 @@ class Mult_Input_Uncert():
         # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
 
 
-        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, rep = rep)
+        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init)  ,rep = rep)
 
         # Let's get the party started!
 

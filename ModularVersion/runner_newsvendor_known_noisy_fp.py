@@ -5,10 +5,10 @@
 
 import matplotlib.pyplot as plt
 from IU_optimizer import *
-from TestProblems import toyfun, toysource
-from TestProblems.newsvendor import newsvendor_noisy
+from TestProblems import Information_Source
+from TestProblems.newsvendor import newsvendor_noisy, newsvendor_noisy_2
 import subprocess as sp
-
+from scipy.stats import norm
 
 def function_caller(rep):
 	print("\nCalling optimizer")
@@ -32,16 +32,31 @@ def function_caller(rep):
 
 	"""
 	np.random.seed(rep)
+	mu = 40.0
+	var = 10.0
 
-	proportions = [16, 22, 20,  6, 32, 28, 18, 26, 29, 12, 24, 34, 30]
+	k = mu ** 2 / var
+	theta = var / mu
+	True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]  # [gamma(a=k,loc=0,scale=theta)]#
+	Assumed_Input_Distributions = [np.random.normal]
+
+	# plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
+	# plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
+	# plt.show()
+
+	Simulator = newsvendor_noisy_2(True_Demand=True_Input_distributions, Assumed_Demand=Assumed_Input_Distributions)
+	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
+													  ub=Simulator.amax, d=1)
+
+	proportions = [6, 12, 16,  20, 24, 28,  32,  36,  40,  44,  48]
 	for i in proportions:
-		[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
-						  lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
-						  lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
-						  distribution = "trunc_norm",
+		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
+						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
+						  lb_a = Simulator.amin, ub_a = Simulator.amax,
+						  distribution = "MUSIG",
 						  n_fun_init = 10,
 						  n_inf_init = i,
-						  Budget = 50,
+						  Budget = 105,
 						  Nx = 100,
 						  Na = 100,
 						  Nd = 100,
@@ -49,4 +64,6 @@ def function_caller(rep):
 						  GP_train_relearning = True,
 						  var_data= 10,
 						  opt_method="KG_fixed_iu",
-						  rep = str(i) +"_"+str(rep))
+						  rep = str(rep))
+
+# function_caller(rep=1)

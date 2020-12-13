@@ -19,7 +19,7 @@ from scipy.stats import invgamma
 from scipy.stats import norm
 from scipy.stats import multivariate_normal
 from scipy.stats import t
-
+from .Cov_Computation import COV_computation
 
 # In this file put any simple little functions that can be abstracted out of the
 # main code, eg samplers, plotting, saving, more complex mathematical operations
@@ -37,7 +37,7 @@ class writeCSV_time_stats():
     def __init__(self, function):
         self.function = function
         self.folder = os.path.basename(sys.argv[0])[0:-3] + "_stats/" + "time"
-        if os.path.isdir(self.folder) == False:
+        if os.path.isdir( self.folder ) == False:
             os.makedirs(self.folder)
         self.time_data = {}
 
@@ -66,13 +66,16 @@ def writeCSV_run_stats():
     """
     :return: generates file with statistics from store_stats()
     """
-    folder = os.path.basename(sys.argv[0])[0:-3] + "_stats/" + "run_stats"
-    if os.path.isdir(folder) == False:
-        os.makedirs(folder)
-
+    base_folder = os.path.basename(sys.argv[0])[0:-3]
     def decorator(func):
         def wrapcsv(*args, **kwargs):
             data = func(*args, **kwargs)
+
+            folder =  base_folder+"_"+ str(data['fp'])+ "/_stats/" + "run_stats"
+
+            if os.path.isdir(folder) == False:
+                os.makedirs(folder)
+
             gen_file = pd.DataFrame.from_dict(data)
             script_dir = os.path.dirname(__file__)
             project_path = script_dir[:-27]
@@ -80,7 +83,7 @@ def writeCSV_run_stats():
             if not os.path.exists(project_path + "RESULTS" + "/" + folder):
                 os.makedirs(project_path + "RESULTS" + "/" + folder)
             path = project_path +"RESULTS" + "/" + folder + '/stats_'+ str(data['file_number'])+'.csv'
-            print("path", path)
+            # print("path", path)
 
             gen_file.to_csv(path_or_buf=path)
             return data
@@ -106,7 +109,7 @@ class store_stats():
 
 
     """
-    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub,  rep, max_prob = True):
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, max_prob = True):
 
         self.rep = rep
         self.lb = lb
@@ -134,6 +137,8 @@ class store_stats():
         self.P5_input = []
         self.P95_input = []
         self.Decision = []
+        if fp is not None:
+            self.fp = fp
 
     def __call__(self,model, Data, XA, Y, A_sample, KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
 
@@ -166,6 +171,7 @@ class store_stats():
 
 
         #file accesed by the decorator to be printed in a csv file.
+
         registered_vars = self.log_file(X_r = self.X_r,
                                         Decision = Decision,
                                         best_r_quality = best_r_quality,
@@ -178,6 +184,7 @@ class store_stats():
                                         DL = self.DL,
                                         HP_names = self.HP_names,
                                         HP_vars = self.HP_values,
+                                        fp = self.fp,
                                         file_number = self.rep)
 
         return registered_vars
@@ -1129,94 +1136,6 @@ def lhs_box(n, lb, ub):
     return(LL)
 
 
-def COV(model, xa1, xa2, chol_K=None, Lk2=None):
-    """Takes a GP model, and 2 points, returns post cov.
-    ARGS
-        model: a gpy object
-        xa1: n1*d matrix
-        xa2: n2*d matrix
-        chol_K: optional precomuted cholesky decompositionb of kern(X,X)
-        Lk2: optional precomputed solve(chol_K, kernel(model.X, xa2)) (eg for XdAd)
-
-    RETURNS
-        s2: posterior GP cov matrix
-     """
-    # print("xa1",xa1)
-    assert len(xa1.shape) == 2;
-    "COV: xa1 must be rank 2"
-    assert len(xa2.shape) == 2;
-    "COV: xa2 must be rank 2"
-    assert xa1.shape[1] == model.X.shape[1];
-    "COV: xa1 must have same dim as model"
-    assert xa2.shape[1] == model.X.shape[1];
-    "COV: xa2 must have same dim as model"
-
-    if chol_K is None:
-        K = model.kern.K(model.X, model.X)
-        chol_K = np.linalg.cholesky(K + (1e-4 ** 2.0) * np.eye(len(K)))
-    else:
-        assert chol_K.shape[0] == model.X.shape[0];
-        "chol_K is not same dim as model.X"
-
-    Lk1 = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
-
-    if Lk2 is None:
-        Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, xa2))
-    else:
-        assert Lk2.shape[0] == model.X.shape[0];
-        "Lk2 is not same dim as model.X"
-        assert Lk2.shape[1] == xa2.shape[0];
-        "Lk2 is not same dim as xa2"
-
-    K_ = model.kern.K(xa1, xa2)
-    # print("K_", K_)
-    # print("Lk1", Lk1)
-    # print("Lk2", Lk2)
-    # print("np.matmul(Lk1.T, Lk2)",np.matmul(Lk1.T, Lk2))
-    s2 = np.matrix(K_) - np.matmul(Lk1.T, Lk2)
-    # print("s2", s2)
-
-
-    # print("model.posterior_covariance_between_points(xa1, xa2)",model.posterior_covariance_between_points(xa1, xa2))
-    s2 = np.array(model.posterior_covariance_between_points(xa1, xa2))#np.array(s2)
-
-    # make sure the output is correct!
-    assert s2.shape[0] == xa1.shape[0];
-    "output dim is wrong!"
-    assert s2.shape[1] == xa2.shape[0];
-    "output dim is wrong!"
-
-    return s2
-
-def VAR(model, xa1, chol_K=None):
-    """Takes a GP model, and 1 point, returns post var.
-
-    ARGS
-     model: a gpy object
-     xa1: n1*d matrix
-     chol_K: cholesky decompositionb of kern(X,X)
-
-    RETURNS
-     s2: posterior GP cov matrix
-     """
-
-    assert len(xa1.shape) == 2;
-    "VAR: xa1 must be rank 2"
-    assert xa1.shape[1] == model.X.shape[1];
-    "VAR: xa1 have same dim as model"
-
-    if chol_K is None:
-        K = model.kern.K(model.X, model.X)
-        chol_K = np.linalg.cholesky(K + (1e-6 ** 2.0) * np.eye(len(K)))
-
-    Lk = np.linalg.solve(chol_K, model.kern.K(model.X, xa1))
-    K_ = model.kern.K(xa1, xa1)
-    s2 = K_ - np.matmul(Lk.T, Lk)
-
-    #s2 = np.array(s2)
-    s2 = np.array(model.posterior_covariance_between_points(xa1, xa1))
-    return s2
-
 @writeCSV_time_stats
 def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     # make a full lattice over X x A and get the GP mean at each point.
@@ -1334,7 +1253,7 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     return topsrc, topDL
 
 @writeCSV_time_stats
-def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
+def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
     """Takes a GPy model, constructs and optimzes KG and
     returns the best xa and best KG value.
 
@@ -1406,10 +1325,17 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
     # plt.show()
 
     # Precompute cholesky decomposition.
-    K = model.kern.K(model.X, model.X)
-    chol_K = np.linalg.cholesky(K + (1e-4 ** 2.0) * np.eye(K.shape[0]))
+    # K = model.kern.K(model.X, model.X)
 
-    Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, XdAd))
+    COV_prime = COV_computation(model=model)
+
+    COV_prime.partial_precomputation_for_covariance()
+
+    COV_prime.posterior_covariance_between_points_partially_precomputed(model.X, model.X)
+
+    # chol_K = np.linalg.cholesky(K + (1e-4 ** 2.0) * np.eye(K.shape[0]))
+    #
+    # Lk2 = np.linalg.solve(chol_K, model.kern.K(model.X, XdAd))
 
     KG_Mc_Input.calls = 0
 
@@ -1435,15 +1361,22 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
 
             # The mean warping integrated over Ad
 
-            S_Xd = COV(model, xa, XdAd, chol_K, Lk2)
+            S_Xd = COV_prime.posterior_covariance_between_points_partially_precomputed(xa, XdAd) #COV(model, xa, XdAd, chol_K, Lk2)
+
+            # print("S", S_Xd)
+            # print("nene",)
+
             S_Xd = S_Xd.reshape(Nx, Na)
             S_Xd = np.mean(S_Xd, axis=1).reshape(1, -1)
             # print("S_Xd",S_Xd)
-            S_x = np.mean(COV(model, xa, newx_Ad, chol_K))
+            S_x = np.mean(COV_prime.posterior_covariance_between_points_partially_precomputed(xa, newx_Ad)) #np.mean(COV(model, xa, newx_Ad, chol_K))
             SS = np.c_[S_x, S_Xd].reshape(-1)
 
             # variance of new observation
-            var_xa = VAR(model, xa, chol_K) + noiseVar
+            # print("var xa", VAR(model, xa, chol_K))
+            # print("var nene nene", COV_prime.posterior_covariance_between_points_partially_precomputed(xa, xa))
+
+            var_xa = COV_prime.posterior_covariance_between_points_partially_precomputed(xa, xa)+ noiseVar #VAR(model, xa, chol_K) + noiseVar
             inv_sd = 1. / np.asarray(var_xa**0.5).reshape(())
 
             SS = SS * inv_sd
@@ -1472,6 +1405,8 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=2000, Nc=5, maxiter=80):
     XA_Ns = np.hstack([np.repeat(X, Na, axis=0),
                       np.tile(Ad, (Ns, 1))])
 
+    # print("Ns", Ns, "Nc", Nc)
+    # raise
     proposed_idx = np.random.choice(len(XA_Ns), Ns)
     XA_Ns = XA_Ns[proposed_idx]
     KG_Ns = np.array([KG_IU(XA_i) for XA_i in XA_Ns])
