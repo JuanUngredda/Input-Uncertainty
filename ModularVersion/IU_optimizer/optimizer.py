@@ -22,7 +22,7 @@ class Mult_Input_Uncert():
                       GP_train = True,
                       GP_train_relearning=False,
                       Gpy_Kernel = None,
-                      opt_method = "KG_DL", rep = None):
+                      opt_method = "KG_DL", rep = None, calculate_true_optimum=True):
 
         """
         Optimizes the test function integrated over IU_dims. The integral
@@ -57,7 +57,7 @@ class Mult_Input_Uncert():
             Data: list of array of inf_src observations
 
             """
-
+        self.calculate_true_optimum = calculate_true_optimum
         lb_x = lb_x.reshape(-1)
         ub_x = ub_x.reshape(-1)
 
@@ -81,25 +81,26 @@ class Mult_Input_Uncert():
         # assert np.all(IU_dims>=0); "IU_dims too low!"
 
         # set the distribution to use for A dimensions.
-        if distribution is "trunc_norm":
+        if distribution == "trunc_norm":
             """
             trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
             and input posterior using uniform prior and gaussian likelihood.
             """
-            if var_data is None:
+            if var_data == None:
                 var_data = np.repeat(1,len(lb_a))
 
             post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var= var_data )
-        elif distribution is "MU_t_S":
+        elif distribution == "MU_t_S":
             """ 
             MUSIG_post: marginalises uncertainty over the variance
             """
             post_maker = MU_s_T_post(amin=inf_src.lb, amax=inf_src.ub)
 
-        elif distribution is "MUSIG":
+        elif distribution == "MUSIG":
             """ 
             MUSIG_post: joint distribution mu and sigma given data. Same MUSIG_post but without marganilising variance
             """
+
             post_maker = Gaussian_musigma_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
                                                     lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
         else:
@@ -140,7 +141,7 @@ class Mult_Input_Uncert():
         # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
 
 
-        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init)  ,rep = rep)
+        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init)  ,rep = rep, calculate_true_optimum =self.calculate_true_optimum)
 
         # Let's get the party started!
 
@@ -190,12 +191,12 @@ class Mult_Input_Uncert():
 
             # Get KG of both simulation and Input uncertainty.
 
-            if opt_method is "KG_DL":
+            if opt_method == "KG_DL":
 
                 XA,Y,Data = self.KG_DL_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)
-            elif opt_method is "KG_fixed_iu":
+            elif opt_method == "KG_fixed_iu":
                 XA,Y,Data = self.KG_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)

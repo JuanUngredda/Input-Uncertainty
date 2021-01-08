@@ -109,7 +109,7 @@ class store_stats():
 
 
     """
-    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, max_prob = True):
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, calculate_true_optimum =False, max_prob = True):
 
         self.rep = rep
         self.lb = lb
@@ -124,7 +124,9 @@ class store_stats():
         self.lb_X = lb[:dimX]
         self.ub_X = ub[:dimX]
         self.Xd = lhs_box(50000, self.lb_X, self.ub_X)
-        self.top_XA, self.best_quality = self.find_top_X()
+        self.calculate_true_optimum = calculate_true_optimum
+        if self.calculate_true_optimum:
+            self.top_XA, self.best_quality = self.find_top_X()
         self.X_r = []
         self.OC = []
         self.KG = []
@@ -137,6 +139,7 @@ class store_stats():
         self.P5_input = []
         self.P95_input = []
         self.Decision = []
+        self.calculate_true_optimum  =calculate_true_optimum
         if fp is not None:
             self.fp = fp
 
@@ -245,13 +248,16 @@ class store_stats():
 
         # XA_r = np.c_[X_r, [self.test_infr.f_mean]]
         X_r = np.atleast_2d(X_r) #np.vstack(np.array([X_r]))
-        self.topX = np.atleast_2d(self.topX)
 
-        val_recom = self.test_func(X_r, None, true_performance_flag=True)
-        val_opt = self.test_func(self.topX, None, true_performance_flag=True)
-
-        OC = val_opt - val_recom
-
+        if self.calculate_true_optimum:
+            self.topX = np.atleast_2d(self.topX)
+            val_recom = self.test_func(X_r, None, true_performance_flag=True)
+            val_opt = self.test_func(self.topX, None, true_performance_flag=True)
+            OC = val_opt - val_recom
+        else:
+            val_recom = self.test_func(X_r, None, true_performance_flag=True)
+            OC = val_recom
+            val_opt = None
         return OC, val_recom, val_opt
 
     def recommended_X(self, model, A_sample):
@@ -331,7 +337,7 @@ class Gaussian_musigma_inference():
         self.xmin = amin
         self.xmax = amax
         self.h = 101
-        self.prior_n_pts = prior_n_pts
+        self.prior_n_pts = int(prior_n_pts)
         self.sig_arr, self.dltsig = np.linspace(1e-3, 20, self.h, retstep=True)
         self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
         self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
@@ -427,6 +433,7 @@ class Gaussian_musigma_inference():
             Y = self.Data_i
             MC_samples = n
             n_data = len(Y) - self.prior_n_pts
+
             Y_data = Y[self.prior_n_pts:]
             Y_prior = Y[:self.prior_n_pts]
             # print("Y", Y, "Y_data", Y_data, "Y_prior", Y_prior)
