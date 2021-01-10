@@ -52,7 +52,7 @@ def function_caller(rep):
 						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
 						  lb_a = Simulator.amin, ub_a = Simulator.amax,
 						  distribution = "Exponential",
-						  n_fun_init = 10,
+						  n_fun_init = 1,
 						  n_inf_init = i,
 						  Budget = 100,
 						  Nx = 100,
@@ -64,6 +64,7 @@ def function_caller(rep):
 						  opt_method="KG_fixed_iu",
 						  rep = str(rep),
 						  save_only_last_stats=True,
-					      calculate_true_optimum=False)
+					      calculate_true_optimum=False,
+						  results_name="Production_line_Fixed_Proportion_RESULTS")
 
-# function_caller(rep=1)
+function_caller(rep=1)

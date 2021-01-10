@@ -71,7 +71,7 @@ def writeCSV_run_stats():
         def wrapcsv(*args, **kwargs):
             data = func(*args, **kwargs)
 
-            folder =  base_folder+"_"+ str(data['fp'])+ "/_stats/" + "run_stats"
+            folder =  base_folder+"/"+data["results_name"]+"_"+ str(data['fp'])+ "/_stats/" + "run_stats"
             print("folder", folder)
             if os.path.isdir(folder) == False:
                 os.makedirs(folder)
@@ -109,7 +109,7 @@ class store_stats():
 
 
     """
-    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, calculate_true_optimum =False, B=None,max_prob = True):
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, results_name, fp=None, calculate_true_optimum =False, B=None,max_prob = True):
 
         self.rep = rep
         self.lb = lb
@@ -141,26 +141,24 @@ class store_stats():
         self.P95_input = []
         self.Decision = []
         self.calculate_true_optimum  =calculate_true_optimum
+        self.results_name = results_name
         if fp is not None:
             self.fp = fp
 
-    def __call__(self,model, Data, XA, Y, A_sample, KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
-
-        print("ENTEREEEEEEEEEEEEEEEEEEEED")
+    def __call__(self,model, Data, XA, Y, A_sample, results_name,KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
 
         mean_input = np.mean(A_sample[0],axis=0)
         P5 = np.percentile(A_sample[0],5,axis=0)
         P95 = np.percentile(A_sample[0],95,axis=0)
         if self.B is None:
-            print("no budget")
+
             X_r = self.recommended_X(model,A_sample)
             self.X_r.append(X_r)
             OC, val_recom, val_opt = self.Opportunity_cost(X_r)
             OC = OC.reshape(-1)[0]
             val_recom = val_recom.reshape(-1)[0]
         else:
-            print("budget")
-            print("XA.shape[0]",XA.shape[0],"self.B", self.B)
+
             if XA.shape[0] == self.B-1:
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
@@ -188,7 +186,7 @@ class store_stats():
 
         ##Adjusting variables to proper data types:
         OC = np.array(self.OC).reshape(-1)
-        print("OC", OC)
+
         best_r_quality = np.array(self.Best_Recommended_Quality).reshape(-1)
         Best_Quality = np.array(self.Best_Quality).reshape(-1)
         Decision = np.array(self.Decision).reshape(-1)
@@ -209,7 +207,8 @@ class store_stats():
                                         HP_names = self.HP_names,
                                         HP_vars = self.HP_values,
                                         fp = self.fp,
-                                        file_number = self.rep)
+                                        file_number = self.rep,
+                                        results_name=str(self.results_name))
 
         return registered_vars
 

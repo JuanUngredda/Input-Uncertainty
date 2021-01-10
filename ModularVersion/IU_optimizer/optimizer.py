@@ -24,7 +24,8 @@ class Mult_Input_Uncert():
                       Gpy_Kernel = None,
                       opt_method = "KG_DL", rep = None,
                        save_only_last_stats=False,
-                      calculate_true_optimum=True):
+                      calculate_true_optimum=True,
+                    results_name="SIM_RESULTS"):
 
         """
         Optimizes the test function integrated over IU_dims. The integral
@@ -148,9 +149,9 @@ class Mult_Input_Uncert():
         # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
 
         if save_only_last_stats:
-            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init), B=int(Budget-n_inf_init) ,rep = rep, calculate_true_optimum =self.calculate_true_optimum)
+            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init), B=int(Budget-n_inf_init) ,rep = rep, results_name=results_name,calculate_true_optimum =self.calculate_true_optimum)
         else:
-            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp=str(n_inf_init), rep=rep,
+            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, results_name,fp=str(n_inf_init), rep=rep,results_name=results_name,
                                 calculate_true_optimum=self.calculate_true_optimum)
 
         # Let's get the party started!
