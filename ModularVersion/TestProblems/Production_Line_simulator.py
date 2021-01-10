@@ -190,7 +190,7 @@ class Production_Line():
 
         pool = multiprocessing.Pool()
         Revenue= pool.map(self.parallelised_sim, range(MC_samples))
-
+        pool.close()
         mean_Revenue = np.mean(Revenue)
         MSE_Revenue = np.sqrt(np.var(Revenue) / len(Revenue))
         # if MSE_Revenue>5:
