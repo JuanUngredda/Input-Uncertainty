@@ -123,7 +123,7 @@ class store_stats():
         self.dimX = dimX
         self.lb_X = lb[:dimX]
         self.ub_X = ub[:dimX]
-        self.Xd = lhs_box(50000, self.lb_X, self.ub_X)
+        self.Xd = lhs_box(500, self.lb_X, self.ub_X)
         self.calculate_true_optimum = calculate_true_optimum
         self.B = B
         if self.calculate_true_optimum:

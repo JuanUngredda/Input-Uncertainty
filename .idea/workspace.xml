@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="158df6c8-8553-4a75-8813-78fa6a1bd35d" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,7 +47,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/ModularVersion" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Interactive_ParEGO" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -199,7 +199,7 @@
       <workItem from="1609509886360" duration="34283000" />
       <workItem from="1610106434460" duration="202000" />
       <workItem from="1610106686964" duration="12900000" />
-      <workItem from="1610205471133" duration="22932000" />
+      <workItem from="1610205471133" duration="24253000" />
     </task>
     <servers />
   </component>

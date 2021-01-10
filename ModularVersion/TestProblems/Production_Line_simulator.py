@@ -168,7 +168,7 @@ class Production_Line():
 
             out = np.zeros((X.shape[0],1))
             for i in range(X.shape[0]):
-                out[i,:] = self.simulator(x = X[i], u = U[i], MC_samples = 50)
+                out[i,:] = self.simulator(x = X[i], u = U[i], MC_samples = 1)
             return out
 
     def simulator(self, x, u, MC_samples,true_performance_flag=False, *args, **kwargs):
