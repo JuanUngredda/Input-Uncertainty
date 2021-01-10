@@ -72,7 +72,7 @@ def writeCSV_run_stats():
             data = func(*args, **kwargs)
 
             folder =  base_folder+"_"+ str(data['fp'])+ "/_stats/" + "run_stats"
-
+            print("folder", folder)
             if os.path.isdir(folder) == False:
                 os.makedirs(folder)
 
@@ -109,7 +109,7 @@ class store_stats():
 
 
     """
-    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, calculate_true_optimum =False, max_prob = True):
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, fp=None, calculate_true_optimum =False, B=None,max_prob = True):
 
         self.rep = rep
         self.lb = lb
@@ -125,6 +125,7 @@ class store_stats():
         self.ub_X = ub[:dimX]
         self.Xd = lhs_box(50000, self.lb_X, self.ub_X)
         self.calculate_true_optimum = calculate_true_optimum
+        self.B = B
         if self.calculate_true_optimum:
             self.top_XA, self.best_quality = self.find_top_X()
         self.X_r = []
@@ -145,16 +146,35 @@ class store_stats():
 
     def __call__(self,model, Data, XA, Y, A_sample, KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
 
-        # print("ENTEREEEEEEEEEEEEEEEEEEEED")
+        print("ENTEREEEEEEEEEEEEEEEEEEEED")
 
         mean_input = np.mean(A_sample[0],axis=0)
         P5 = np.percentile(A_sample[0],5,axis=0)
         P95 = np.percentile(A_sample[0],95,axis=0)
-        X_r = self.recommended_X( model,A_sample)
-        OC, val_recom, val_opt = self.Opportunity_cost(X_r)
+        if self.B is None:
+            print("no budget")
+            X_r = self.recommended_X(model,A_sample)
+            self.X_r.append(X_r)
+            OC, val_recom, val_opt = self.Opportunity_cost(X_r)
+            OC = OC.reshape(-1)[0]
+            val_recom = val_recom.reshape(-1)[0]
+        else:
+            print("budget")
+            print("XA.shape[0]",XA.shape[0],"self.B", self.B)
+            if XA.shape[0] == self.B-1:
+                X_r = self.recommended_X(model, A_sample)
+                self.X_r.append(X_r)
+                OC, val_recom, val_opt = self.Opportunity_cost(X_r)
+                OC = OC.reshape(-1)[0]
+                val_recom = val_recom.reshape(-1)[0]
+            else:
+                self.X_r.append(0)
+                OC, val_recom, val_opt = 0, 0, 0
+
         self.Decision.append(Decision)
-        self.X_r.append(X_r)
+
         self.OC.append(OC)
+
         self.KG.append(KG)
         self.DL.append(DL)
         self.HP_names.append(HP_names)
@@ -168,6 +188,7 @@ class store_stats():
 
         ##Adjusting variables to proper data types:
         OC = np.array(self.OC).reshape(-1)
+        print("OC", OC)
         best_r_quality = np.array(self.Best_Recommended_Quality).reshape(-1)
         Best_Quality = np.array(self.Best_Quality).reshape(-1)
         Decision = np.array(self.Decision).reshape(-1)
@@ -300,19 +321,166 @@ class store_stats():
                 return -M_X_i
 
         M_X, varX = marginal_current(Xd, var_flag=True)
-        current_top_X = Xd[np.argmin(M_X)]
-
+        print("M_X, varX",M_X, varX)
+        current_top_X = np.atleast_2d(Xd[np.argmin(M_X)])
+        print("current_top_X",current_top_X)
         X_r = np.array(
             [minimize(marginal_current, x_discrete, method='Nelder-Mead').x for x_discrete in current_top_X]).reshape(
             -1)
 
-        print("recommended design", X_r)
+        print("X_r", X_r, " marginal_current", marginal_current(X_r,var_flag=True))
         # plt.scatter(Xd, -M_X )
         # plt.scatter(Xd, -M_X + 1.96*np.sqrt(varX ))
         # plt.scatter(Xd, -M_X - 1.96*np.sqrt(varX ))
         # plt.show()
         return X_r
 
+
+class Exponential_inference():
+    """ Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Prior over mu and variance
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self, amin=0, amax=10, prior_n_pts=5, lb=None, ub=None, lbx=None, ubx=None):
+        self.xmin = amin
+        self.xmax = amax
+        self.h = 101
+        self.prior_n_pts = int(prior_n_pts)
+        self.sig_arr, self.dltsig = np.linspace(1e-3, 20, self.h, retstep=True)
+        self.a_arr, self.dlta = np.linspace(1e-3, self.xmax, self.h, retstep=True)
+        self.y_n1, self.dlty_n1 = np.linspace(0, self.xmax, 5000, retstep=True)
+        self.lb = lb
+        self.ub = ub
+        self.lbx = lbx
+        self.ubx = ubx
+        self.prior_alpha = 1 / 2
+        self.prior_beta = 0
+        print("Unknown lambda posterior distribution")
+
+    def __call__(self, src_data):
+        """
+
+        :param src_data: list of narrays. include whole data.
+        :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
+        posterior density distribution.
+        """
+        self.Data_post = src_data
+        return self.post_dens, self.post_A_sampler, self.post_Data_sampler
+
+    def post_dens(self, a, src_idx):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        # print("DENSITY")
+
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+        assert a.shape[1] == 1, "more than 1 inputs"
+        assert self.prior_n_pts > 3, "include at least 3 prior data points from external source"
+        # print("post dens")
+        # print("a",a)
+
+        # print("self.Data_post", self.Data_post)
+        self.Data_i = self.Data_post[src_idx]
+        Y = self.Data_i
+
+        S = np.sum(Y)
+        n = len(Y)
+
+        self.param1 = self.prior_alpha + n
+        self.param2 = self.prior_beta + S
+
+        pdf_post = gamma.pdf(x=a, a=self.param1, scale=np.reciprocal(self.param2))
+
+        return pdf_post / self.renormalisation_constant
+
+    def post_A_sampler(self, n, src_idx):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+
+        # print("SAMPLER")
+        feasable_counter = 0
+        feasable_final_samples = []
+        self.renormalisation_constant = []
+        MC_samples = n
+        while feasable_counter < MC_samples:
+            # print("self.Data_post",self.Data_post)
+            self.Data_i = self.Data_post[src_idx]
+            Y = self.Data_i
+            S = np.sum(Y)
+            n_data = len(Y)
+
+            self.param1 = self.prior_alpha + n_data
+            self.param2 = self.prior_beta + S
+
+            joint_samples = gamma.rvs(size=MC_samples, a=self.param1, scale=np.reciprocal(self.param2))
+            joint_samples = np.atleast_2d(joint_samples).T
+
+            bounds_violation = np.any(np.logical_and(joint_samples > self.lb, joint_samples < self.ub), axis=1)
+            feasable_counter += np.sum(bounds_violation)
+
+            feasable_samples = joint_samples[bounds_violation]
+            feasable_final_samples.append(feasable_samples)
+            self.renormalisation_constant.append(feasable_samples.shape[0] * 1.0 / MC_samples)
+
+        self.renormalisation_constant = np.mean(self.renormalisation_constant)
+
+        samples = np.concatenate(feasable_final_samples)[:MC_samples]
+        print("n", n)
+        return samples
+
+    def post_Data_sampler(self, n, src_idx):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
+
+        feasable_counter = 0
+        feasable_final_samples = []
+        MC_samples = n
+        while feasable_counter < MC_samples:
+            self.Data_i = self.Data_post[src_idx]
+            Y = self.Data_i
+
+            S = np.sum(Y)
+            n_data = len(Y)
+
+            self.param1 = self.prior_alpha + n_data
+            self.param2 = self.prior_beta + S
+            param_alphap = self.param1
+            param_betap = self.param2
+
+            predictive_samples = np.random.pareto(a=param_alphap, size=MC_samples) * param_betap
+            predictive_samples = np.atleast_2d(predictive_samples).T
+            bounds_violation = np.logical_and(predictive_samples > self.lbx, predictive_samples < self.ubx)
+            feasable_counter += np.sum(bounds_violation)
+            feasable_predictive_samples = predictive_samples[bounds_violation]
+            feasable_final_samples.append(feasable_predictive_samples)
+        return np.concatenate(feasable_final_samples)[:MC_samples]
 class Gaussian_musigma_inference():
 
     """ Given i.i.d observations, builds a posterior density and a sampler
@@ -1283,6 +1451,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
     ub = ub.reshape(-1)
     Ad = np.hstack(Ad)
 
+    print("Ad.shape[1]",Ad.shape[1],"Xd.shape[1]",Xd.shape[1],"model.X.shape[1]",model.X.shape[1])
     assert Ns > Nc;
     "more random points than optimzer points"
     assert len(Xd.shape) == 2;

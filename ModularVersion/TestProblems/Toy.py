@@ -160,6 +160,7 @@ class Information_Source():
         #print("self.true_params ", self.true_params)
         self.n_srcs = d
 
+
     def __call__(self, n, src, *args, **kwargs):
         return self.Distribution[src].rvs(n) #self.f_mean[src] + np.random.normal(size=(n)) * np.sqrt(self.f_cov[src])
 

@@ -22,7 +22,9 @@ class Mult_Input_Uncert():
                       GP_train = True,
                       GP_train_relearning=False,
                       Gpy_Kernel = None,
-                      opt_method = "KG_DL", rep = None, calculate_true_optimum=True):
+                      opt_method = "KG_DL", rep = None,
+                       save_only_last_stats=False,
+                      calculate_true_optimum=True):
 
         """
         Optimizes the test function integrated over IU_dims. The integral
@@ -71,7 +73,7 @@ class Mult_Input_Uncert():
 
         lb = lb.reshape(-1)
         ub = ub.reshape(-1)
-
+        print("dimX", dim_X, "lb", lb.shape[0])
         assert dim_X < lb.shape[0], "More X dims than possible"
         assert lb.shape[0] == ub.shape[0], "bounds must be same shape"
         assert np.all(lb <= ub), "lower must be below upper!"
@@ -103,6 +105,11 @@ class Mult_Input_Uncert():
 
             post_maker = Gaussian_musigma_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
                                                     lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
+
+        elif distribution == "Exponential":
+            post_maker = Exponential_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
+                                                    lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
+
         else:
             raise NotImplementedError
 
@@ -140,8 +147,11 @@ class Mult_Input_Uncert():
         print("\nStoring Data...")
         # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
 
-
-        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init)  ,rep = rep, calculate_true_optimum =self.calculate_true_optimum)
+        if save_only_last_stats:
+            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp =str(n_inf_init), B=int(Budget-n_inf_init) ,rep = rep, calculate_true_optimum =self.calculate_true_optimum)
+        else:
+            stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp=str(n_inf_init), rep=rep,
+                                calculate_true_optimum=self.calculate_true_optimum)
 
         # Let's get the party started!
 
@@ -184,8 +194,10 @@ class Mult_Input_Uncert():
             A_density, A_sampler, _ = post_maker(Data)
             # print("inf_src.n_srcs",inf_src.n_srcs)
 
+
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
+
             # print("A_grid[i]",A_grid[0][np.argmin(W_A)])
             # print("W_A", np.min(W_A))
 

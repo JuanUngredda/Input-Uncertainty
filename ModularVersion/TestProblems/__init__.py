@@ -18,3 +18,4 @@ from .Ambulance_simulator import Ambulance_Delays
 from .experiments2d import rosenbrock
 from .newsvendor import newsvendor_deterministic
 from .newsvendor import newsvendor_noisy
+from .Production_Line_simulator import Production_Line

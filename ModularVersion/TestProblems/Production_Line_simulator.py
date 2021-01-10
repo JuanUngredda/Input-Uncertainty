@@ -20,7 +20,7 @@ import simpy
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
-
+from scipy.stats import expon
 
 SIM_TIME = 2000     # Simulation time in minutes
 WARM_UP_PERIOD = 1000
@@ -126,7 +126,7 @@ def setup(env, carwash,  MU, Parameter):
     while True:
 
         Parameter = np.reciprocal(Parameter) #Change lambda to Beta as numpy parameter is Beta
-        yield env.timeout(np.random.exponential(scale=Parameter))
+        yield env.timeout(expon.rvs(scale=Parameter))
         env.process(car(env, 'Car %d' % i, carwash, MU=MU))
         i += 1
 
@@ -134,8 +134,8 @@ def setup(env, carwash,  MU, Parameter):
 class Production_Line():
     def __init__(self,True_rate=None, dimx=3, dima =1):
 
-        self.xamin = np.array([0, 0, 0])
-        self.xamax = np.array([2, 2, 2])
+        self.xamin = np.array([0, 0, 0, 0])
+        self.xamax = np.array([2, 2, 2, 2])
         # print("self.xamin",self.xamin, "self.xamax",self.xamax)
         self.dx = dimx
         self.da = dima
@@ -150,18 +150,21 @@ class Production_Line():
 
     def __call__(self, X, U, true_performance_flag=False, *args, **kwargs):
 
-        assert len(X.shape) == 2, "x must be an N*d matrix, each row a d point"
-        assert len(U.shape) == 2, "x must be an N*d matrix, each row a d point"
-        assert X.shape[1] == self.dx, "Test_func: wrong x input dimension"
-        assert U.shape[1] == self.da, "Test_func: wrong u input dimension"
-
         if true_performance_flag:
+            assert len(X.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert X.shape[1] == self.dx, "Test_func: wrong x input dimension"
             out = np.zeros((X.shape[0],1))
 
             for i in range(X.shape[0]):
                 out[i,:] = self.simulator(x = X[i], u = self.True_rate, MC_samples = 1000)
             return out
         else:
+            assert len(X.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert len(U.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert X.shape[1] == self.dx, "Test_func: wrong x input dimension"
+            assert U.shape[1] == self.da, "Test_func: wrong u input dimension"
+
+
             out = np.zeros((X.shape[0],1))
             for i in range(X.shape[0]):
                 out[i,:] = self.simulator(x = X[i], u = U[i], MC_samples = 50)
@@ -194,7 +197,7 @@ class Production_Line():
         # plt.hist(Revenue)
         # plt.show()
         # print("x", self.x,"u", self.u)
-        # print("mean_rev", mean_Revenue, "MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
+        print("mean_rev", mean_Revenue, "MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
         return mean_Revenue.reshape(-1)
 
     def parallelised_sim(self, identifier):
@@ -212,14 +215,28 @@ class Production_Line():
 
         Revenue = ((r * Throughtput) / (c0 + np.sum(c * self.x))) - c1
 
+        Revenue = (Revenue - (-102.839362))/168.76971540118384
+
         return Revenue
 
 
-Simulator = Production_Line(True_rate=0.5)
-# X = np.array([[1,1,1]])
-# rate = np.array([[1]])
 # import time
+# Simulator = Production_Line(True_rate=0.5)
+#
+# N=100
+# D=4
+#
+# ub = np.array([[2,2,2,2]])
+# lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
+# X = np.random.random((N,D))*(ub-lb) + lb
+# rate = np.array([[1]])
 # start = time.time()
+# out = Simulator(X[:,1:], X[:,:1], true_performance_flag=False)
+# print("out", out, "mean", np.mean(out), "std", np.std(out))
+# stop = time.time()
+# print("time", stop-start)
+#
+
 
 # rev = []
 # time_step = np.linspace(1000,1500,50)
@@ -229,26 +246,26 @@ Simulator = Production_Line(True_rate=0.5)
 
 # plt.plot(time_step, np.array(rev).reshape(-1))
 # plt.show()
-N=1
-D=4
-ub = np.array([[2,2,2,2]])
-lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
-np.random.seed(1)
-X = np.random.random((N,D))*(ub-lb) + lb
-
-
-test_X = np.linspace(1e-9,2,N)
-import time
-for k in range(D):
-    Test_matrix = np.ones((N, D))
-    Test_matrix[:,k] = test_X
-    start = time.time()
-    out = Simulator(X=Test_matrix[:, :D-1], U=Test_matrix[:, D-1:], true_performance_flag=True)
-    stop = time.time()
-    print(stop - start)
-    # print("Test_matrix",Test_matrix)
-    plt.scatter(test_X, out)
-    plt.show()
+# N=1
+# D=4
+# ub = np.array([[2,2,2,2]])
+# lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
+# np.random.seed(1)
+# X = np.random.random((N,D))*(ub-lb) + lb
+#
+#
+# test_X = np.linspace(1e-9,2,N)
+# import time
+# for k in range(D):
+#     Test_matrix = np.ones((N, D))
+#     Test_matrix[:,k] = test_X
+#     start = time.time()
+#     out = Simulator(X=Test_matrix[:, :D-1], U=Test_matrix[:, D-1:], true_performance_flag=True)
+#     stop = time.time()
+#     print(stop - start)
+#     # print("Test_matrix",Test_matrix)
+#     plt.scatter(test_X, out)
+#     plt.show()
 
 # print("X",X[:,3:])
 # print("Simulator output", Simulator(X, rate,true_performance_flag=False))
