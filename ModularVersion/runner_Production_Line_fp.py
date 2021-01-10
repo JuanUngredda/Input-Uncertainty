@@ -53,7 +53,7 @@ def function_caller(rep):
 						  lb_a = Simulator.amin, ub_a = Simulator.amax,
 						  distribution = "Exponential",
 						  n_fun_init = 90,
-						  n_inf_init = i,
+						  n_inf_init = 5,
 						  Budget = 97,
 						  Nx = 100,
 						  Na = 100,
