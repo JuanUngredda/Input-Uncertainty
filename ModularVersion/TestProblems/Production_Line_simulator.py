@@ -21,6 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
 from scipy.stats import expon
+# import logging
 
 SIM_TIME = 2000     # Simulation time in minutes
 WARM_UP_PERIOD = 1000
@@ -188,16 +189,19 @@ class Production_Line():
         self.SIM_TIME = SIM_TIME
         self.WARM_UP = WARM_UP_PERIOD
 
-        pool = multiprocessing.Pool()
-        Revenue= pool.map(self.parallelised_sim, range(MC_samples))
-        pool.close()
+        # pool = multiprocessing.Pool()
+
+        with multiprocessing.Pool() as pool:
+            Revenue= pool.map(self.parallelised_sim, range(MC_samples))
+        # Revenue= pool.map(self.parallelised_sim, range(MC_samples))
+        # pool.close()
         mean_Revenue = np.mean(Revenue)
         MSE_Revenue = np.sqrt(np.var(Revenue) / len(Revenue))
         # if MSE_Revenue>5:
         # plt.hist(Revenue)
         # plt.show()
         # print("x", self.x,"u", self.u)
-        print("mean_rev", mean_Revenue, "MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
+        print("mean_rev", mean_Revenue, "len(Revenue)",len(Revenue),"MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
         return mean_Revenue.reshape(-1)
 
     def parallelised_sim(self, identifier):
