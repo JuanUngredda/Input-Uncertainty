@@ -52,7 +52,7 @@ def function_caller(rep):
 					  distribution = "Exponential",
 					  n_fun_init = 20,
 					  n_inf_init = 2,
-					  Budget = 23,
+					  Budget = 100,
 					  Nx = 100,
 					  Na = 101,
 					  Nd = 100,
