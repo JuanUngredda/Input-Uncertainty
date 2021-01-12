@@ -164,7 +164,7 @@ class store_stats():
                External_Source_samples = np.sum(self.Decision)
 
             print("XA.shape[0], External_Source_samples ",XA.shape[0], External_Source_samples, "self.B-1",self.B-1 )
-            if XA.shape[0] + External_Source_samples == self.B:
+            if XA.shape[0] + External_Source_samples == self.B-1:
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
                 OC, val_recom, val_opt = self.Opportunity_cost(X_r)
