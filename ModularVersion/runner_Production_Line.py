@@ -52,7 +52,7 @@ def function_caller(rep):
 					  distribution = "Exponential",
 					  n_fun_init = 20,
 					  n_inf_init = 2,
-					  Budget = 100,
+					  Budget = 23,
 					  Nx = 100,
 					  Na = 101,
 					  Nd = 100,
@@ -65,4 +65,4 @@ def function_caller(rep):
 					  calculate_true_optimum=False,
 					  results_name="Production_line_BICO_RESULTS")
 
-# function_caller(rep=1)
+# function_caller(rep=6)

@@ -150,6 +150,7 @@ class store_stats():
         mean_input = np.mean(A_sample[0],axis=0)
         P5 = np.percentile(A_sample[0],5,axis=0)
         P95 = np.percentile(A_sample[0],95,axis=0)
+        self.Decision.append(Decision)
         if self.B is None:
 
             X_r = self.recommended_X(model,A_sample)
@@ -159,7 +160,11 @@ class store_stats():
             val_recom = val_recom.reshape(-1)[0]
         else:
 
-            if XA.shape[0] == self.B-1:
+            if Decision is not None:
+               External_Source_samples = np.sum(self.Decision)
+
+            print("XA.shape[0], External_Source_samples ",XA.shape[0], External_Source_samples, "self.B-1",self.B-1 )
+            if XA.shape[0] + External_Source_samples == self.B:
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
                 OC, val_recom, val_opt = self.Opportunity_cost(X_r)
@@ -169,7 +174,7 @@ class store_stats():
                 self.X_r.append(0)
                 OC, val_recom, val_opt = 0, 0, 0
 
-        self.Decision.append(Decision)
+
 
         self.OC.append(OC)
 

@@ -265,10 +265,12 @@ class Production_Line():
 # Simulator = Production_Line(True_rate=0.5)
 # k=-1
 # Test_matrix = np.ones((N, D))
+#
 # Test_matrix[:,k] = test_X
 # start = time.time()
 # print("start simulations")
-# out = Simulator(X=Test_matrix[:, :D-1], U=Test_matrix[:, D-1:], true_performance_flag=False)
+#
+# out = Simulator(X=np.array([[6.6116529e-07,5.8930000e-01,5.1320207e-01]]), U=np.array([[0]]), true_performance_flag=True)
 # stop = time.time()
 # print(stop - start)
 # # print("Test_matrix",Test_matrix)
