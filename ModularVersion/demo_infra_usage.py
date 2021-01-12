@@ -42,7 +42,7 @@ def run(args):
     hostname = sp.check_output(['hostname'], shell=True).decode()[:-1]
 
     # IMPORT AND RUN MODULES
-    from runner_Production_Line import function_caller
+    from runner_Production_Line_fp import function_caller
     function_caller(args.k)
 
     # save something to hard drive in /res/ subfolder

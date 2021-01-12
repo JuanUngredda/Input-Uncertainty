@@ -157,7 +157,7 @@ class Production_Line():
             out = np.zeros((X.shape[0],1))
 
             for i in range(X.shape[0]):
-                out[i,:] = self.simulator(x = X[i], u = self.True_rate, MC_samples = 1000)
+                out[i,:] = self.simulator(x = X[i], u = self.True_rate, MC_samples = 1)
             return out
         else:
             assert len(X.shape) == 2, "x must be an N*d matrix, each row a d point"
