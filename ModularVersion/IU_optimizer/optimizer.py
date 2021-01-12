@@ -61,6 +61,7 @@ class Mult_Input_Uncert():
 
             """
         self.calculate_true_optimum = calculate_true_optimum
+        self.kill_signal = False
         lb_x = lb_x.reshape(-1)
         ub_x = ub_x.reshape(-1)
 
@@ -204,6 +205,12 @@ class Mult_Input_Uncert():
 
             # Get KG of both simulation and Input uncertainty.
 
+            if XA.shape[0] + Ndata() == Budget-1:
+                self.kill_signal = True
+            else:
+                self.kill_signal = False
+
+
             if opt_method == "KG_DL":
 
                 XA,Y,Data = self.KG_DL_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
@@ -260,6 +267,7 @@ class Mult_Input_Uncert():
               A_sample = A_grid,
               KG = [topxa, topKG],
               DL = [topsrc, topDL],
+              kill_signal=self.kill_signal,
               HP_names=GPmodel.parameter_names(),
               HP_values=GPmodel.param_array)
 
@@ -313,7 +321,7 @@ class Mult_Input_Uncert():
 
         topsrc, topDL = [np.nan,np.nan]
 
-        stats(GPmodel, Data, XA, Y, A_grid, [topxa, topKG], [topsrc, topDL], HP_names=GPmodel.parameter_names(),
+        stats(GPmodel, Data, XA, Y, A_grid, [topxa, topKG], [topsrc, topDL], kill_signal=self.kill_signal,HP_names=GPmodel.parameter_names(),
               HP_values=GPmodel.param_array)
 
         print("topxa", topxa)

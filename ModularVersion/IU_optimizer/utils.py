@@ -145,7 +145,7 @@ class store_stats():
         if fp is not None:
             self.fp = fp
 
-    def __call__(self,model, Data, XA, Y, A_sample,KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
+    def __call__(self,model, Data, XA, Y, A_sample,KG = np.nan, DL = np.nan ,kill_signal=False,Decision =None,HP_names = None,HP_values=None):
 
         mean_input = np.mean(A_sample[0],axis=0)
         P5 = np.percentile(A_sample[0],5,axis=0)
@@ -160,11 +160,8 @@ class store_stats():
             val_recom = val_recom.reshape(-1)[0]
         else:
 
-            if Decision is not None:
-               External_Source_samples = np.sum(self.Decision)
-
-            print("XA.shape[0], External_Source_samples ",XA.shape[0], External_Source_samples, "self.B-1",self.B-1 )
-            if XA.shape[0] + External_Source_samples == self.B-1:
+            print("kill_signal",kill_signal)
+            if kill_signal:
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
                 OC, val_recom, val_opt = self.Opportunity_cost(X_r)
