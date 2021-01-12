@@ -2,7 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="158df6c8-8553-4a75-8813-78fa6a1bd35d" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/ModularVersion/runner_Production_Line.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/TestProblems/Production_Line_simulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/TestProblems/Production_Line_simulator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/demo_infra_usage.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/demo_infra_usage.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_newsvendor_unknown_noisy.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_newsvendor_unknown_noisy.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +67,7 @@
       <recent name="$PROJECT_DIR$/ModularVersion/TestProblems" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.runner_Production_Line_fp">
+  <component name="RunManager" selected="Python.demo_infra_usage">
     <configuration name="Production_Line_simulator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -105,7 +112,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="runner_Production_Line_fp" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="runner_Production_Line" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -118,7 +125,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_Production_Line.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -127,7 +134,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="runner_newsvendor_known_noisy_fp" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="runner_newsvendor_unknown_noisy" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -140,7 +147,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_newsvendor_known_noisy_fp.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_newsvendor_unknown_noisy.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -149,7 +156,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="runner_newsvendor_unknown_noisy_fp" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Input-Uncertainty" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -157,12 +164,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/runner_newsvendor_unknown_noisy_fp.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ModularVersion/IU_optimizer/utils.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -173,11 +180,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.runner_Production_Line_fp" />
         <item itemvalue="Python.demo_infra_usage" />
+        <item itemvalue="Python.runner_Production_Line" />
         <item itemvalue="Python.Production_Line_simulator" />
-        <item itemvalue="Python.runner_newsvendor_unknown_noisy_fp" />
-        <item itemvalue="Python.runner_newsvendor_known_noisy_fp" />
+        <item itemvalue="Python.runner_newsvendor_unknown_noisy" />
+        <item itemvalue="Python.utils" />
       </list>
     </recent_temporary>
   </component>
@@ -199,7 +206,8 @@
       <workItem from="1609509886360" duration="34283000" />
       <workItem from="1610106434460" duration="202000" />
       <workItem from="1610106686964" duration="12900000" />
-      <workItem from="1610205471133" duration="25837000" />
+      <workItem from="1610205471133" duration="26469000" />
+      <workItem from="1610385358131" duration="19983000" />
     </task>
     <servers />
   </component>
@@ -220,16 +228,18 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Input_Uncertainty$newsvendor_known_noise_fp.coverage" NAME="newsvendor_known_noise_fp Coverage Results" MODIFIED="1606061322570" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$newsvendor.coverage" NAME="newsvendor Coverage Results" MODIFIED="1610123197162" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_newsvendor_unknown_noisy_fp.coverage" NAME="runner_newsvendor_unknown_noisy_fp Coverage Results" MODIFIED="1610125363428" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_Production_Line_fp.coverage" NAME="runner_Production_Line_fp Coverage Results" MODIFIED="1610291230029" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$utils.coverage" NAME="utils Coverage Results" MODIFIED="1607263135711" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_Production_Line_fp.coverage" NAME="runner_Production_Line_fp Coverage Results" MODIFIED="1610386705894" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$utils.coverage" NAME="utils Coverage Results" MODIFIED="1610392591348" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$ATO_xie.coverage" NAME="ATO_xie Coverage Results" MODIFIED="1607099537056" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$optimizer.coverage" NAME="optimizer Coverage Results" MODIFIED="1605803795103" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_newsvendor_unknown_noisy.coverage" NAME="runner_newsvendor_unknown_noisy Coverage Results" MODIFIED="1610402805685" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_newsvendor_known_noisy_fp.coverage" NAME="runner_newsvendor_known_noisy_fp Coverage Results" MODIFIED="1610123622353" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$demo_infra_usage.coverage" NAME="demo_infra_usage Coverage Results" MODIFIED="1610282738087" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$Production_Line_simulator.coverage" NAME="Production_Line_simulator Coverage Results" MODIFIED="1610278848475" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$demo_infra_usage.coverage" NAME="demo_infra_usage Coverage Results" MODIFIED="1610412849564" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$Toy.coverage" NAME="Toy Coverage Results" MODIFIED="1606088189015" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_newsvendor_known_noisy.coverage" NAME="runner_newsvendor_known_noisy Coverage Results" MODIFIED="1607424074243" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$newsvendor.coverage" NAME="newsvendor Coverage Results" MODIFIED="1610123197162" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_Production_Line.coverage" NAME="runner_Production_Line Coverage Results" MODIFIED="1610412551678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$optimizer.coverage" NAME="optimizer Coverage Results" MODIFIED="1605803795103" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$Production_Line_simulator.coverage" NAME="Production_Line_simulator Coverage Results" MODIFIED="1610412203428" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
   </component>
 </project>

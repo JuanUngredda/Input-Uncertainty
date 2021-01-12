@@ -5,8 +5,10 @@
 
 import matplotlib.pyplot as plt
 from IU_optimizer import *
-from TestProblems import toyfun, toysource
-from TestProblems.newsvendor import newsvendor_noisy
+from TestProblems import Information_Source
+from TestProblems.newsvendor import newsvendor_noisy, newsvendor_noisy_2
+import subprocess as sp
+from scipy.stats import norm
 
 print("\nCalling optimizer")
 myoptimizer = Mult_Input_Uncert()
@@ -28,23 +30,43 @@ Choose distribution method between:
 -MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 """
+def function_caller(rep):
+    np.random.seed(rep)
+    mu = 40.0
+    var = 10.0
+
+    k = mu ** 2 / var
+    theta = var / mu
+    True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]  # [gamma(a=k,loc=0,scale=theta)]#
+    Assumed_Input_Distributions = [np.random.normal]
+
+    # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
+    # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
+    # plt.show()
+
+    Simulator = newsvendor_noisy_2(True_Demand=True_Input_distributions, Assumed_Demand=Assumed_Input_Distributions)
+    Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
+                                                      ub=Simulator.amax, d=1)
 
 
-"""TO DO: IMPLEMENT LEARNING NOISE https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf"""
+    [XA], [Y], [Data] = myoptimizer(sim_fun=Simulator, inf_src=Information_Source_Generator,
+                                    lb_x=Simulator.xmin, ub_x=Simulator.xmax,
+                                    lb_a=Simulator.amin, ub_a=Simulator.amax,
+                                    distribution="MUSIG",
+                                    n_fun_init=10,
+                                    n_inf_init=5,
+                                    Budget=105,
+                                    Nx=100,
+                                    Na=101,
+                                    Nd=101,
+                                    GP_train=True,
+                                    GP_train_relearning=True,
+                                    var_data=None,
+                                    opt_method="KG_DL",
+                                    rep=str(rep),
+                                    save_only_last_stats=True,
+                                    calculate_true_optimum=False,
+                                    results_name="Newsvendor_BICO_RESULTS")
 
 
-[XA], [Y], [Data] = myoptimizer( sim_fun = newsvendor_noisy(), inf_src= toysource(lb =newsvendor_noisy().amin,ub=newsvendor_noisy().amax,d=1),
-                      lb_x = newsvendor_noisy().xmin, ub_x = newsvendor_noisy().xmax,
-                      lb_a = newsvendor_noisy().amin, ub_a = newsvendor_noisy().amax,
-                      distribution = "MUSIG",
-                      n_fun_init = 10,
-                      n_inf_init = 0,
-                      Budget = 12,
-                      Nx = 100,
-                      Na = 100,
-                      Nd = 100,
-                      GP_train = True,
-                      GP_train_relearning = True,
-                      var_data= 10,
-                      opt_method="KG_DL",
-                      rep = time.time()*1e3)
+function_caller(rep=1)

@@ -46,25 +46,23 @@ def function_caller(rep):
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
 													  ub=Simulator.amax, d=1)
 
-	proportions = np.linspace(5,40,10)
-	for i in proportions:
-		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
-						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
-						  lb_a = Simulator.amin, ub_a = Simulator.amax,
-						  distribution = "Exponential",
-						  n_fun_init = 10,
-						  n_inf_init = i,
-						  Budget = 100,
-						  Nx = 100,
-						  Na = 100,
-						  Nd = 100,
-						  GP_train = True,
-						  GP_train_relearning = True,
-						  var_data= None,
-						  opt_method="KG_fixed_iu",
-						  rep = str(rep+11),
-						  save_only_last_stats=True,
-					      calculate_true_optimum=False,
-						  results_name="Production_line_Fixed_Proportion_RESULTS")
+	[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
+					  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
+					  lb_a = Simulator.amin, ub_a = Simulator.amax,
+					  distribution = "Exponential",
+					  n_fun_init = 20,
+					  n_inf_init = 2,
+					  Budget = 100,
+					  Nx = 100,
+					  Na = 101,
+					  Nd = 100,
+					  GP_train = True,
+					  GP_train_relearning = True,
+					  var_data= None,
+					  opt_method="KG_DL",
+					  rep = str(rep),
+					  save_only_last_stats=True,
+					  calculate_true_optimum=False,
+					  results_name="Production_line_BICO_RESULTS")
 
 # function_caller(rep=1)

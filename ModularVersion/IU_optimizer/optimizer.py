@@ -123,7 +123,8 @@ class Mult_Input_Uncert():
         print("XA",XA)
         Y = sim_fun(XA[:,0:dim_X], XA[:,dim_X:XA.shape[1]])
         ker = GPy.kern.RBF(input_dim=lb.shape[0], variance=10000., lengthscale=(ub - lb) * 0.1, ARD=True)
-        ker.lengthscale.constrain_bounded(0, np.max((ub - lb) )* 1/1.5)
+
+        ker.lengthscale.constrain_bounded(0, np.min(ub - lb)* 0.40)
 
 
         if Gpy_Kernel != None:
@@ -162,7 +163,7 @@ class Mult_Input_Uncert():
             print("XA", XA)
             GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
             GPmodel.optimize_restarts(10, robust=True, verbose=True)
-            GPmodel.Gaussian_noise.variance.constrain_bounded(1e-2, 5)
+            GPmodel.Gaussian_noise.variance.constrain_bounded(1e-2, 0.02)
             Gaussian_noise = GPmodel.Gaussian_noise.variance
             if Gaussian_noise < 1e-9:
                 Gaussian_noise = 1e-3
@@ -177,14 +178,13 @@ class Mult_Input_Uncert():
                     print("XA", XA)
                     GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
                     GPmodel.optimize_restarts(10, robust=True, verbose=True)
-                    GPmodel.Gaussian_noise.variance.constrain_bounded(1e-3, 5)
+                    # GPmodel.Gaussian_noise.variance.constrain_bounded(1e-3, 0.02)
+
                     Gaussian_noise = GPmodel.Gaussian_noise.variance
                     if Gaussian_noise < 1e-9:
                         Gaussian_noise = 1e-3
-
+                    # GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)
             # Fit model to simulation data.
-
-            GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)
 
             # Discretize X by lhs and discretize A with posterior samples as required.
             X_grid = X_sampler(Nx)

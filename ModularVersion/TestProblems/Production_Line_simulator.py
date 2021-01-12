@@ -136,7 +136,7 @@ class Production_Line():
     def __init__(self,True_rate=None, dimx=3, dima =1):
 
         self.xamin = np.array([0, 0, 0, 0])
-        self.xamax = np.array([2, 2, 2, 2])
+        self.xamax = np.array([2, 2, 2, 5])
         # print("self.xamin",self.xamin, "self.xamax",self.xamax)
         self.dx = dimx
         self.da = dima
@@ -201,7 +201,7 @@ class Production_Line():
         # plt.hist(Revenue)
         # plt.show()
         # print("x", self.x,"u", self.u)
-        print("mean_rev", mean_Revenue, "len(Revenue)",len(Revenue),"MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
+        print("mean_rev", mean_Revenue, "var",np.var(Revenue),"len(Revenue)",len(Revenue),"MSE rev", MSE_Revenue, "min", np.min(Revenue), "max", np.max(Revenue))
         return mean_Revenue.reshape(-1)
 
     def parallelised_sim(self, identifier):
@@ -227,9 +227,9 @@ class Production_Line():
 # import time
 # Simulator = Production_Line(True_rate=0.5)
 #
-# N=100
-# D=4
 #
+# D=4
+# N=100
 # ub = np.array([[2,2,2,2]])
 # lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
 # X = np.random.random((N,D))*(ub-lb) + lb
@@ -258,18 +258,22 @@ class Production_Line():
 # X = np.random.random((N,D))*(ub-lb) + lb
 #
 #
-# test_X = np.linspace(1e-9,2,N)
+# N=50
+# D=4
+# test_X = np.linspace(1e-9,9,N)
 # import time
-# for k in range(D):
-#     Test_matrix = np.ones((N, D))
-#     Test_matrix[:,k] = test_X
-#     start = time.time()
-#     out = Simulator(X=Test_matrix[:, :D-1], U=Test_matrix[:, D-1:], true_performance_flag=True)
-#     stop = time.time()
-#     print(stop - start)
-#     # print("Test_matrix",Test_matrix)
-#     plt.scatter(test_X, out)
-#     plt.show()
+# Simulator = Production_Line(True_rate=0.5)
+# k=-1
+# Test_matrix = np.ones((N, D))
+# Test_matrix[:,k] = test_X
+# start = time.time()
+# print("start simulations")
+# out = Simulator(X=Test_matrix[:, :D-1], U=Test_matrix[:, D-1:], true_performance_flag=False)
+# stop = time.time()
+# print(stop - start)
+# # print("Test_matrix",Test_matrix)
+# plt.scatter(test_X, out)
+# plt.show()
 
 # print("X",X[:,3:])
 # print("Simulator output", Simulator(X, rate,true_performance_flag=False))

@@ -145,7 +145,7 @@ class store_stats():
         if fp is not None:
             self.fp = fp
 
-    def __call__(self,model, Data, XA, Y, A_sample, results_name,KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
+    def __call__(self,model, Data, XA, Y, A_sample,KG = np.nan, DL = np.nan ,Decision =None,HP_names = None,HP_values=None):
 
         mean_input = np.mean(A_sample[0],axis=0)
         P5 = np.percentile(A_sample[0],5,axis=0)
@@ -378,6 +378,7 @@ class Exponential_inference():
         :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
         posterior density distribution.
         """
+
         self.Data_post = src_data
         return self.post_dens, self.post_A_sampler, self.post_Data_sampler
 
@@ -394,23 +395,22 @@ class Exponential_inference():
 
         assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
         assert a.shape[1] == 1, "more than 1 inputs"
-        assert self.prior_n_pts > 3, "include at least 3 prior data points from external source"
+        assert self.prior_n_pts > 0, "include at least 1 prior data points from external source"
         # print("post dens")
         # print("a",a)
 
         # print("self.Data_post", self.Data_post)
-        self.Data_i = self.Data_post[src_idx]
-        Y = self.Data_i
+        Y = self.Data_post[src_idx]
 
         S = np.sum(Y)
         n = len(Y)
 
-        self.param1 = self.prior_alpha + n
-        self.param2 = self.prior_beta + S
+        param1 = self.prior_alpha + n
+        param2 = self.prior_beta + S
 
-        pdf_post = gamma.pdf(x=a, a=self.param1, scale=np.reciprocal(self.param2))
-
-        return pdf_post / self.renormalisation_constant
+        pdf_post = gamma.pdf(x=a, a=param1, scale=np.reciprocal(param2))
+        renorm_density = pdf_post #/ self.renormalisation_constant
+        return np.array(renorm_density).reshape(-1)
 
     def post_A_sampler(self, n, src_idx):
         """
@@ -426,15 +426,15 @@ class Exponential_inference():
         MC_samples = n
         while feasable_counter < MC_samples:
             # print("self.Data_post",self.Data_post)
-            self.Data_i = self.Data_post[src_idx]
-            Y = self.Data_i
+            Y = self.Data_post[src_idx]
+
             S = np.sum(Y)
             n_data = len(Y)
 
-            self.param1 = self.prior_alpha + n_data
-            self.param2 = self.prior_beta + S
+            param1 = self.prior_alpha + n_data
+            param2 = self.prior_beta + S
 
-            joint_samples = gamma.rvs(size=MC_samples, a=self.param1, scale=np.reciprocal(self.param2))
+            joint_samples = gamma.rvs(size=MC_samples, a=param1, scale=np.reciprocal(param2))
             joint_samples = np.atleast_2d(joint_samples).T
 
             bounds_violation = np.any(np.logical_and(joint_samples > self.lb, joint_samples < self.ub), axis=1)
@@ -447,7 +447,9 @@ class Exponential_inference():
         self.renormalisation_constant = np.mean(self.renormalisation_constant)
 
         samples = np.concatenate(feasable_final_samples)[:MC_samples]
-        print("n", n)
+        # print("n_data", n_data, "Y", Y, "S", S, "self.prior_alpha",self.prior_alpha, "self.prior_beta",self.prior_beta)
+        # plt.hist(samples)
+        # plt.show()
         return samples
 
     def post_Data_sampler(self, n, src_idx):
@@ -462,24 +464,24 @@ class Exponential_inference():
         feasable_final_samples = []
         MC_samples = n
         while feasable_counter < MC_samples:
-            self.Data_i = self.Data_post[src_idx]
-            Y = self.Data_i
+            Y= self.Data_post[src_idx]
 
             S = np.sum(Y)
             n_data = len(Y)
 
-            self.param1 = self.prior_alpha + n_data
-            self.param2 = self.prior_beta + S
-            param_alphap = self.param1
-            param_betap = self.param2
+            param1 = self.prior_alpha + n_data
+            param2 = self.prior_beta + S
+            param_alphap = param1
+            param_betap = param2
 
             predictive_samples = np.random.pareto(a=param_alphap, size=MC_samples) * param_betap
             predictive_samples = np.atleast_2d(predictive_samples).T
-            bounds_violation = np.logical_and(predictive_samples > self.lbx, predictive_samples < self.ubx)
+            bounds_violation = np.any(np.logical_and(predictive_samples > self.lbx, predictive_samples < self.ubx), axis=1)
             feasable_counter += np.sum(bounds_violation)
             feasable_predictive_samples = predictive_samples[bounds_violation]
             feasable_final_samples.append(feasable_predictive_samples)
-        return np.concatenate(feasable_final_samples)[:MC_samples]
+        samples = np.array(np.concatenate(feasable_final_samples)[:MC_samples]).reshape(-1)
+        return samples
 class Gaussian_musigma_inference():
 
     """ Given i.i.d observations, builds a posterior density and a sampler
@@ -686,6 +688,7 @@ class Gaussian_musigma_inference():
             feasable_counter += np.sum(bounds_violation)
             feasable_predictive_samples = predictive_samples[bounds_violation]
             feasable_final_samples.append(feasable_predictive_samples)
+
         return np.concatenate(feasable_final_samples)[:n]
 
 class MU_s_T_post():
@@ -1332,12 +1335,6 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     Nx = Xd.shape[0]
     Na = Ad.shape[0]
 
-    # precompute inverse weights of Ad points.
-
-    invWd =np.reciprocal(Wd)  # np.sum(Wd)/Wd
-
-    _, _, cur_Data_sampler = pst_mkr(Data)
-    # get the index of the current top recomended x value.
     def marginal_current(X):
 
         if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
@@ -1350,20 +1347,30 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
 
             M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
             # now we have weights, get the peak of reweighted GP means
-            M_X_i = np.mean(M_XA, axis=1)
+            # print("M_XA", M_XA)
 
+            M_X_i = np.mean(M_XA, axis=1)
             return -M_X_i
 
     M_X = marginal_current(Xd)
-    current_top_X = Xd[np.argmin(M_X)]
+    current_top_X = np.atleast_2d(Xd[np.argmin(M_X)])
 
-    cur_topX_index = np.array([minimize(marginal_current, x_discrete , method = 'Nelder-Mead').x for x_discrete in current_top_X]).reshape(-1)
+    cur_topX_index = -np.array(
+        [minimize(marginal_current, x_discrete, method='Nelder-Mead').fun for x_discrete in current_top_X]).reshape(
+        -1)
+
+    # precompute inverse weights of Ad points.
+    invWd =np.reciprocal(Wd)  # np.sum(Wd)/Wd
+
+    _, _, cur_Data_sampler = pst_mkr(Data)
+    # get the index of the current top recomended x value.
 
     # loop over IU parameters / A dims / inf sources.
     DL = []
     y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
     # print("y_Data", y_Data)
     for src in range(len(Data)):
+
 
         # loop over individual DL samples
         DL_src = []
@@ -1372,10 +1379,24 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
             tmp_Data_i = np.array([y_Data[src][i]])
 
             tmp_Data = Data[:]
+
+            #######
+            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+            # print("len", len(Wi), len(Ad_list[src]))
+            # plt.scatter(Ad_list[src], Wi, color="blue")
+            #######
             tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
 
             # get the importance weights of the Ad points from new posterior
+
             tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            ##################
+            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+            # plt.scatter(Ad_list[src], Wi, color="red")
+            # plt.show()
+            #######
 
             def marginal_one_step_ahead(X):
                 if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
@@ -1388,36 +1409,48 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
 
                     M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
 
+
                     Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
 
                     # print("beg Wi", Wi)
                     # print("invWd[src]",invWd[src])
+                    # plt.scatter(Ad_list[src], Wi)
+                    # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
+                    # plt.show()
+
                     Wi = Wi * invWd[src]
+
                     # print("np.sum(Wi)",np.sum(Wi))
-                    Wi = Wi / np.sum(Wi)
+                    #Wi = Wi / np.sum(Wi)
+                    # raise
                     # print("end Wi", Wi)
                     # now we have weights, get the peak of reweighted GP means
-                    M_X_i = np.sum(M_XA * Wi, axis=1)
+                    M_X_i = np.mean(M_XA * Wi, axis=1)
                     return -M_X_i
 
             M_X_i = marginal_one_step_ahead(Xd)
-
             estimated_top_X = Xd[np.argmin(M_X_i)]
+            estimated_top_X = np.atleast_2d(estimated_top_X)
             # print("estimated_top_X",estimated_top_X)
             # print("M_X_i",M_X_i)
             top_val = [minimize(marginal_one_step_ahead, x_discrete , method = 'Nelder-Mead').fun for x_discrete in estimated_top_X ]
             top_val = -np.array(top_val).reshape(-1)
-            # plt.scatter(Xd, -M_X, label="M_X", color="blue")
-            # plt.scatter(Xd, -M_X_i, label="new M_X", color="magenta")
-            # plt.show()
-            DL_i = top_val - (-marginal_one_step_ahead(cur_topX_index))
+
+            #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
+            DL_i = top_val -cur_topX_index#- (-marginal_one_step_ahead(cur_topX_index))
             # print("DL_i",DL_i)
             #assert DL_i >= 0, "Delta Loss can't be negative"
             # keep this single MC sample of DL improvement
+            # print("DL_i",DL_i)
             DL_src.append(DL_i)
 
         # get the average over DL samples for this source and save in the list.
-        DL.append(np.mean(DL_src))
+        # print("mean DL", np.mean(DL_src))
+        BICO_value = np.mean(DL_src)
+        print("BICO_value",BICO_value, "MSE", np.std(DL_src)/np.sqrt(len(DL_src)))
+        if BICO_value<0:
+            BICO_value = 0
+        DL.append(BICO_value)
  #       print("np.mean(DL_src)",np.mean(DL_src), "np.MSE(DL_src)",np.std(DL_src)/np.sqrt(len(DL_src)))
 #        raise
     # get the best source and its DL.
