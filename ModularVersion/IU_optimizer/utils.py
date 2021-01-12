@@ -171,9 +171,9 @@ class store_stats():
                 OC = OC.reshape(-1)[0]
                 val_recom = val_recom.reshape(-1)[0]
             else:
-                self.X_r.append(0)
+                X_r = self.recommended_X(model, A_sample)
+                self.X_r.append(X_r)
                 OC, val_recom, val_opt = 0, 0, 0
-
 
 
         self.OC.append(OC)
