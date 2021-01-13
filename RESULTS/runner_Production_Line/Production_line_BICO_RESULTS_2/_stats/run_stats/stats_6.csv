@@ -1,3 +1,0 @@
-,X_r,Decision,best_r_quality,top_quality,OC,mean_input,P5_input,P95_input,KG,DL,HP_names,HP_vars,fp,file_number,results_name
-0,[0.56103491 0.3559067  0.40819241],False,0,0,1.2695305539816366,[0.32096575],[0.05405403],[0.70526657],"[array([[1.28683563, 0.25547344, 0.35850578, 0.92236667]]), 0.09760246507623593]","[0, 0.026552730619538147]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']","[1.13376229e+00 1.20286639e+04 5.55954376e-01 3.81213101e-01
- 6.63401360e+00 1.00001136e-04]",2,6,Production_line_BICO_RESULTS
