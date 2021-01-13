@@ -151,6 +151,8 @@ class store_stats():
         P5 = np.percentile(A_sample[0],5,axis=0)
         P95 = np.percentile(A_sample[0],95,axis=0)
         self.Decision.append(Decision)
+        self.XA = XA
+        self.Y = Y
         if self.B is None:
 
             X_r = self.recommended_X(model,A_sample)
@@ -162,15 +164,21 @@ class store_stats():
 
             print("kill_signal",kill_signal)
             if kill_signal:
+                X_sampled = np.atleast_2d(XA[np.argmax(Y)][:self.dimX])
+                OC= self.test_func( X_sampled, None, true_performance_flag=True)
+
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
-                OC, val_recom, val_opt = self.Opportunity_cost(X_r)
+                _, val_recom, val_opt = self.Opportunity_cost(X_r)
                 OC = OC.reshape(-1)[0]
                 val_recom = val_recom.reshape(-1)[0]
+                val_opt = np.max([val_recom , OC])
             else:
+
+                OC= np.max(Y)#self.test_func( X_sampled, U_sampled, true_performance_flag=False)
                 X_r = self.recommended_X(model, A_sample)
                 self.X_r.append(X_r)
-                OC, val_recom, val_opt = 0, 0, 0
+                OC, val_recom, val_opt = OC, 0, 0
 
 
         self.OC.append(OC)
@@ -303,10 +311,12 @@ class store_stats():
         def marginal_current(X, var_flag=False):
 
             if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
+                # print("True", True)
                 return (1000000)
             else:
                 X = np.atleast_2d(X)
                 Nx_internal = X.shape[0]
+
                 XdAd = np.hstack([np.repeat(X, Na, axis=0),
                                   np.tile(Ad, (Nx_internal, 1))])
 
@@ -314,26 +324,39 @@ class store_stats():
                 M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
                 # now we have weights, get the peak of reweighted GP means
                 M_X_i = np.mean(M_XA, axis=1)
+
+                var_XA = model.predict(XdAd)[1].reshape(Nx_internal, Na)
+                # now we have weights, get the peak of reweighted GP means
+                varX = np.mean(var_XA, axis=1)
                 if var_flag:
+                    # print("Entered")
                     var_XA = model.predict(XdAd)[1].reshape(Nx_internal, Na)
                     # now we have weights, get the peak of reweighted GP means
                     varX = np.mean(var_XA, axis=1)
+                    # print("M_X_i_inside_f, varX_inside_f",M_X_i, varX)
                     return -M_X_i, varX
                 return -M_X_i
 
         M_X, varX = marginal_current(Xd, var_flag=True)
-        print("M_X, varX",M_X, varX)
-        current_top_X = np.atleast_2d(Xd[np.argmin(M_X)])
-        print("current_top_X",current_top_X)
-        X_r = np.array(
-            [minimize(marginal_current, x_discrete, method='Nelder-Mead').x for x_discrete in current_top_X]).reshape(
-            -1)
+        anchor_points = np.atleast_2d(Xd[np.argsort(M_X.reshape(-1))[:7]])
 
+        best_discrete_point = np.atleast_2d(self.XA[:,:self.dimX][np.argmax(self.Y.reshape(-1))])
+
+        print("anchor_points",anchor_points)
+        print("best_discrete_point",best_discrete_point, "value", np.max(self.Y))
+        anchor_points = np.concatenate((anchor_points, best_discrete_point))
+
+        # print("current_top_X",current_top_X)
+
+        print("anchor_points vals", marginal_current(anchor_points, var_flag=True))
+        optimised_x= np.array(
+            [minimize(marginal_current, x_discrete, method='Nelder-Mead').x for x_discrete in anchor_points])
+
+        optimised_values = marginal_current(optimised_x,var_flag=False)
+        print("optimised_x",optimised_x,"optimised_values",optimised_values)
+        X_r = optimised_x[np.argmin(optimised_values)]
         print("X_r", X_r, " marginal_current", marginal_current(X_r,var_flag=True))
-        # plt.scatter(Xd, -M_X )
-        # plt.scatter(Xd, -M_X + 1.96*np.sqrt(varX ))
-        # plt.scatter(Xd, -M_X - 1.96*np.sqrt(varX ))
-        # plt.show()
+
         return X_r
 
 
@@ -1355,11 +1378,20 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
             return -M_X_i
 
     M_X = marginal_current(Xd)
-    current_top_X = np.atleast_2d(Xd[np.argmin(M_X)])
+    anchor_points = np.atleast_2d(Xd[np.argsort(M_X.reshape(-1))[:7]])
 
-    cur_topX_index = -np.array(
-        [minimize(marginal_current, x_discrete, method='Nelder-Mead').fun for x_discrete in current_top_X]).reshape(
-        -1)
+    best_discrete_point = np.atleast_2d(model.X[:, :Xd.shape[1]][np.argmax(model.Y.reshape(-1))])
+
+    anchor_points = np.concatenate((anchor_points, best_discrete_point))
+
+    # print("current_top_X",current_top_X)
+    optimised_x = np.array(
+        [minimize(marginal_current, x_discrete, method='Nelder-Mead').x for x_discrete in anchor_points])
+
+    optimised_values = marginal_current(optimised_x)
+    cur_topX = np.atleast_2d(optimised_x[np.argmin(optimised_values)])
+    cur_top_X_value = -np.min(optimised_values)
+
 
     # precompute inverse weights of Ad points.
     invWd =np.reciprocal(Wd)  # np.sum(Wd)/Wd
@@ -1369,100 +1401,124 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
 
     # loop over IU parameters / A dims / inf sources.
     DL = []
-    y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
-    # print("y_Data", y_Data)
-    for src in range(len(Data)):
+
+    number_MC_simulations = [100]#range(10,1000,10)
+    mean_BICO_value = []
+    MSE_BICO_value = []
+    number_of_samples = []
+    data = {}
+    for Nd in number_MC_simulations:
+        y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
+        # print("y_Data", y_Data)
+        for src in range(len(Data)):
 
 
-        # loop over individual DL samples
-        DL_src = []
-        for i in range(Nd):
-            # sample a new observation and add it to the original Data
-            tmp_Data_i = np.array([y_Data[src][i]])
+            # loop over individual DL samples
+            DL_src = []
+            for i in range(Nd):
+                # sample a new observation and add it to the original Data
+                tmp_Data_i = np.array([y_Data[src][i]])
 
-            tmp_Data = Data[:]
+                tmp_Data = Data[:]
 
-            #######
-            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
-            # print("len", len(Wi), len(Ad_list[src]))
-            # plt.scatter(Ad_list[src], Wi, color="blue")
-            #######
-            tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
+                #######
+                # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+                # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+                # print("len", len(Wi), len(Ad_list[src]))
+                # plt.scatter(Ad_list[src], Wi, color="blue")
+                #######
+                tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
 
-            # get the importance weights of the Ad points from new posterior
+                # get the importance weights of the Ad points from new posterior
 
-            tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-            ##################
-            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
-            # plt.scatter(Ad_list[src], Wi, color="red")
-            # plt.show()
-            #######
+                tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+                ##################
+                # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+                # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+                # plt.scatter(Ad_list[src], Wi, color="red")
+                # plt.show()
+                #######
 
-            def marginal_one_step_ahead(X):
-                if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
-                    return (1000000)
-                else:
-                    X = np.atleast_2d(X)
-                    Nx_internal = X.shape[0]
-                    XdAd = np.hstack([np.repeat(X, Na, axis=0),
-                                      np.tile(Ad, (Nx_internal, 1))])
+                def marginal_one_step_ahead(X):
+                    if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
+                        return (1000000)
+                    else:
+                        X = np.atleast_2d(X)
+                        Nx_internal = X.shape[0]
+                        XdAd = np.hstack([np.repeat(X, Na, axis=0),
+                                          np.tile(Ad, (Nx_internal, 1))])
 
-                    M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
+                        M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
 
 
-                    Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+                        A_pdf_vals = tmp_post_A_dens(Ad_list[src], src_idx=src)
 
-                    # print("beg Wi", Wi)
-                    # print("invWd[src]",invWd[src])
-                    # plt.scatter(Ad_list[src], Wi)
-                    # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
-                    # plt.show()
+                        # print("beg Wi", Wi)
+                        # print("invWd[src]",invWd[src])
+                        # plt.scatter(Ad_list[src], Wi)
+                        # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
+                        # plt.show()
 
-                    Wi = Wi * invWd[src]
+                        Wi = A_pdf_vals * invWd[src]
 
-                    # print("np.sum(Wi)",np.sum(Wi))
-                    #Wi = Wi / np.sum(Wi)
-                    # raise
-                    # print("end Wi", Wi)
-                    # now we have weights, get the peak of reweighted GP means
-                    M_X_i = np.mean(M_XA * Wi, axis=1)
-                    return -M_X_i
+                        # print("np.sum(Wi)",np.sum(Wi))
+                        #Wi = Wi / np.sum(Wi)
+                        # raise
+                        # print("end Wi", Wi)
+                        # now we have weights, get the peak of reweighted GP means
+                        M_X_i = np.mean(M_XA * Wi, axis=1)
+                        return -M_X_i
 
-            M_X_i = marginal_one_step_ahead(Xd)
-            estimated_top_X = Xd[np.argmin(M_X_i)]
-            estimated_top_X = np.atleast_2d(estimated_top_X)
-            # print("estimated_top_X",estimated_top_X)
-            # print("M_X_i",M_X_i)
-            top_val = [minimize(marginal_one_step_ahead, x_discrete , method = 'Nelder-Mead').fun for x_discrete in estimated_top_X ]
-            top_val = -np.array(top_val).reshape(-1)
+                M_X_i = marginal_one_step_ahead(Xd)
+                estimated_top_X = Xd[np.argmin(M_X_i)]
+                estimated_top_X = np.atleast_2d(estimated_top_X)
+                anchor_points_inner_opt = np.concatenate((estimated_top_X, cur_topX))
 
-            #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
-            DL_i = top_val -cur_topX_index#- (-marginal_one_step_ahead(cur_topX_index))
-            # print("DL_i",DL_i)
-            #assert DL_i >= 0, "Delta Loss can't be negative"
-            # keep this single MC sample of DL improvement
-            # print("DL_i",DL_i)
-            DL_src.append(DL_i)
 
-        # get the average over DL samples for this source and save in the list.
-        # print("mean DL", np.mean(DL_src))
-        BICO_value = np.mean(DL_src)
-        print("BICO_value",BICO_value, "MSE", np.std(DL_src)/np.sqrt(len(DL_src)))
-        if BICO_value<0:
-            BICO_value = 0
-        DL.append(BICO_value)
+
+                # print("estimated_top_X",estimated_top_X)
+                # print("M_X_i",M_X_i)
+                optimised_anchor = np.array([minimize(marginal_one_step_ahead, x_discrete , method = 'Nelder-Mead').x for x_discrete in anchor_points_inner_opt])
+                optimised_anchor_values = marginal_one_step_ahead(optimised_anchor)
+                top_fun_val = -np.min(optimised_anchor_values).reshape(-1)
+
+
+                #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
+                DL_i = top_fun_val  -cur_top_X_value#- (-marginal_one_step_ahead(cur_topX_index))
+                if DL_i<0:
+                    DL_i=0
+                #assert DL_i >= 0, "Delta Loss can't be negative"
+                # keep this single MC sample of DL improvement
+                # print("DL_i",DL_i)
+                DL_src.append(DL_i)
+
+            # get the average over DL samples for this source and save in the list.
+            # print("mean DL", np.mean(DL_src))
+            BICO_value = np.mean(DL_src)
+            print("BICO_value",BICO_value, "MSE", np.std(DL_src)/np.sqrt(len(DL_src)))
+            if BICO_value<0:
+                BICO_value = 0
+            DL.append(BICO_value)
  #       print("np.mean(DL_src)",np.mean(DL_src), "np.MSE(DL_src)",np.std(DL_src)/np.sqrt(len(DL_src)))
 #        raise
     # get the best source and its DL.
+        mean_BICO_value.append(BICO_value)
+        MSE_BICO_value.append(np.std(DL_src)/np.sqrt(len(DL_src)))
+        number_of_samples.append(Nd)
+        data["number_MC_samples"] = np.array(number_of_samples).reshape(-1)
+        data["mean"] = np.array(mean_BICO_value).reshape(-1)
+        data["MSE"] = np.array(MSE_BICO_value).reshape(-1)
+        path = "/home/juan/Documents/repos_data/Input-Uncertainty/Computational_Complexity/Monte_Carlo/BICO_MC_Complexity.csv"
+        gen_file = pd.DataFrame.from_dict(data)
+        gen_file.to_csv(path_or_buf=path)
 
+    # raise
     topsrc = np.argmax(DL)
     topDL = np.max(DL)  # - np.max(M_X)
     return topsrc, topDL
 
 @writeCSV_time_stats
-def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
+def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=500, Nc=5, maxiter=80):
     """Takes a GPy model, constructs and optimzes KG and
     returns the best xa and best KG value.
 
@@ -1485,7 +1541,6 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
     ub = ub.reshape(-1)
     Ad = np.hstack(Ad)
 
-    print("Ad.shape[1]",Ad.shape[1],"Xd.shape[1]",Xd.shape[1],"model.X.shape[1]",model.X.shape[1])
     assert Ns > Nc;
     "more random points than optimzer points"
     assert len(Xd.shape) == 2;
@@ -1515,6 +1570,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
     Nx = Xd.shape[0]
     Na = Ad.shape[0]
 
+
     XdAd = np.hstack([np.repeat(Xd, Na, axis=0),
                       np.tile(Ad, (Nx, 1))])
     # Precompute the posterior mean at X_d integrated over A.
@@ -1523,20 +1579,6 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
 
 
     M_Xd = np.mean(M_Xd, axis=1).reshape(1, -1)
-    # S_Xd = np.mean(S_Xd,axis=1).reshape(1,-1)
-    #
-    # plt.scatter(Xd,M_Xd)
-    # plt.scatter(Xd, M_Xd + 1.95*np.sqrt(S_Xd))
-    # plt.scatter(Xd, M_Xd - 1.95* np.sqrt(S_Xd))
-    # plt.show()
-    #
-    # plt.scatter(model.X[:,0],model.X[:,1])
-    # plt.scatter(model.X[-1, 0], model.X[-1, 1],color="red")
-    # plt.show()
-
-    # Precompute cholesky decomposition.
-    # K = model.kern.K(model.X, model.X)
-
     COV_prime = COV_computation(model=model)
 
     COV_prime.partial_precomputation_for_covariance()
@@ -1611,19 +1653,89 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=50, Nc=5, maxiter=80):
     # and do Nelder Mead starting from each of them.
     lb_X = np.array(lb).reshape(-1)[:dim_X]
     ub_X = np.array(ub).reshape(-1)[:dim_X]
-    X = lhs_box(Ns, lb=lb_X, ub = ub_X ) #lb, ub)
-    XA_Ns = np.hstack([np.repeat(X, Na, axis=0),
-                      np.tile(Ad, (Ns, 1))])
 
-    # print("Ns", Ns, "Nc", Nc)
-    # raise
-    proposed_idx = np.random.choice(len(XA_Ns), Ns)
-    XA_Ns = XA_Ns[proposed_idx]
+    ub_gen_A = np.max(Ad,axis=0)
+    lb_gen_A = np.min(Ad,axis=0)
+    print("ub_gen_A",ub_gen_A)
+    print("lb_gen_A ",lb_gen_A )
+    lhs_ub = np.concatenate((ub_X, ub_gen_A))
+    lhs_lb = np.concatenate((lb_X, lb_gen_A))
+    XA_Ns = lhs_box(Ns, lb=lhs_lb, ub = lhs_ub ) #lb, ub)
     KG_Ns = np.array([KG_IU(XA_i) for XA_i in XA_Ns])
-    XA_Nc = KG_Ns.argsort()[-Nc:]
-    XA_Nc = XA_Ns[XA_Nc, :]
+    anchor_points = XA_Ns[np.argsort(KG_Ns)[:Nc]]
 
-    _ = [minimize(KG_IU, XA_i, method='nelder-mead', options={'maxiter': maxiter}) for XA_i in XA_Nc]
 
+    recommended_x_vector = recommended_X(model=model, A_sample=Ad, Xd=Xd, lb=lb, ub=ub, XA=model.X, Y=model.Y, dimX=Xd.shape[1])
+    recommended_x_vector = np.atleast_2d(recommended_x_vector)
+    random_a_vector= np.atleast_2d(lhs_box(1, lb=lb_gen_A, ub = ub_gen_A))
+    print("recommended_x_vector",recommended_x_vector,"random_a_vector",random_a_vector)
+    recommended_xa_vector = np.hstack((recommended_x_vector, random_a_vector))
+    anchor_points = np.concatenate((anchor_points, recommended_xa_vector))
+
+    print("anchor_points ",anchor_points )
+    _ = [minimize(KG_IU, XA_i, method='nelder-mead', options={'maxiter': maxiter}) for XA_i in anchor_points]
+    print("KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI",KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI)
     return KG_Mc_Input.bestxa, KG_Mc_Input.bestEVI
 
+def recommended_X( model, A_sample, Xd, lb, ub, XA, Y, dimX):
+    """
+
+    :param model: trained GP model
+    :param A_sample: Sample from posterior input distribution to marginilise input.
+    :return: recommended design, X_r. using lhs discretisation
+    """
+    print("recommended X to choose...")
+    Ad = A_sample
+    Nx = Xd.shape[0]
+    Na = Ad.shape[0]
+    # print("Ad", Ad)
+    lb = lb.reshape(-1)
+    ub = ub.reshape(-1)
+
+    def marginal_current(X, var_flag=False):
+
+        if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
+            # print("True", True)
+            return (1000000)
+        else:
+            X = np.atleast_2d(X)
+            Nx_internal = X.shape[0]
+            # print("X",X.shape, "Ad", Ad.shape, "Na", Na, "Nx_int", Nx_internal)
+            XdAd = np.hstack([np.repeat(X, Na, axis=0),
+                              np.tile(Ad, (Nx_internal, 1))])
+
+
+            M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
+            # now we have weights, get the peak of reweighted GP means
+            M_X_i = np.mean(M_XA, axis=1)
+            if var_flag:
+                # print("Entered")
+                var_XA = model.predict(XdAd)[1].reshape(Nx_internal, Na)
+                # now we have weights, get the peak of reweighted GP means
+                varX = np.mean(var_XA, axis=1)
+                # print("M_X_i_inside_f, varX_inside_f",M_X_i, varX)
+                return -M_X_i, varX
+            return -M_X_i
+
+    M_X, varX = marginal_current(Xd, var_flag=True)
+    anchor_points = np.atleast_2d(Xd[np.argsort(M_X.reshape(-1))[:7]])
+
+    best_discrete_point = np.atleast_2d(XA[:,:dimX][np.argmax(Y.reshape(-1))])
+    # plt.hist(Ad)
+    # plt.show()
+    print("anchor_points",anchor_points)
+    print("best_discrete_point",best_discrete_point, "value", np.max(Y))
+    anchor_points = np.concatenate((anchor_points, best_discrete_point))
+
+    # print("current_top_X",current_top_X)
+
+    print("anchor_points vals", marginal_current(anchor_points, var_flag=True))
+    optimised_x= np.array(
+        [minimize(marginal_current, x_discrete, method='Nelder-Mead').x for x_discrete in anchor_points])
+
+    optimised_values = marginal_current(optimised_x,var_flag=False)
+    print("optimised_x",optimised_x,"optimised_values",optimised_values)
+    X_r = optimised_x[np.argmin(optimised_values)]
+    print("X_r", X_r, " marginal_current", marginal_current(X_r,var_flag=True))
+
+    return X_r

@@ -136,7 +136,7 @@ class Production_Line():
     def __init__(self,True_rate=None, dimx=3, dima =1):
 
         self.xamin = np.array([0, 0, 0, 0])
-        self.xamax = np.array([2, 2, 2, 5])
+        self.xamax = np.array([2, 2, 2, 7])
         # print("self.xamin",self.xamin, "self.xamax",self.xamax)
         self.dx = dimx
         self.da = dima
@@ -157,7 +157,7 @@ class Production_Line():
             out = np.zeros((X.shape[0],1))
 
             for i in range(X.shape[0]):
-                out[i,:] = self.simulator(x = X[i], u = self.True_rate, MC_samples = 1)
+                out[i,:] = self.simulator(x = X[i], u = self.True_rate, MC_samples = 100)
             return out
         else:
             assert len(X.shape) == 2, "x must be an N*d matrix, each row a d point"
@@ -219,7 +219,7 @@ class Production_Line():
 
         Revenue = ((r * Throughtput) / (c0 + np.sum(c * self.x))) - c1
 
-        Revenue = (Revenue - (-102.839362))/168.76971540118384
+        Revenue = (Revenue-(-102.839362))/168.76971540118384
 
         return Revenue
 
@@ -229,14 +229,20 @@ class Production_Line():
 #
 #
 # D=4
-# N=100
+# N=1000
 # ub = np.array([[2,2,2,2]])
 # lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
-# X = np.random.random((N,D))*(ub-lb) + lb
-# rate = np.array([[1]])
+# X =np.array([[0.1, 7.29685763e-01, 6.65953669e-01]]) # np.random.random((N,D))*(ub-lb) + lb
+# X[:,-1] = 0.5
+#
 # start = time.time()
-# out = Simulator(X[:,1:], X[:,:1], true_performance_flag=False)
-# print("out", out, "mean", np.mean(out), "std", np.std(out))
+# out = Simulator(X[:,:3], X[:,3:], true_performance_flag=True)
+# out = out.reshape(-1)
+# x_r = X[np.argmax(out)]
+# print("x_r", x_r, "val", np.max(out))
+# print("sorted X", X[np.argsort(out)])
+# print("sorted vals", np.sort(out))
+# # print("out", out, "mean", np.mean(out), "std", np.std(out))
 # stop = time.time()
 # print("time", stop-start)
 #
@@ -258,22 +264,23 @@ class Production_Line():
 # X = np.random.random((N,D))*(ub-lb) + lb
 #
 #
-# N=50
+# N=1000
 # D=4
 # test_X = np.linspace(1e-9,9,N)
 # import time
 # Simulator = Production_Line(True_rate=0.5)
 # k=-1
-# Test_matrix = np.ones((N, D))
 #
-# Test_matrix[:,k] = test_X
-# start = time.time()
+# test_X=np.random.random((N,D-1))*2
+#
+#
 # print("start simulations")
 #
-# out = Simulator(X=np.array([[6.6116529e-07,5.8930000e-01,5.1320207e-01]]), U=np.array([[0]]), true_performance_flag=True)
+# out = Simulator(X=np.array([[1.1622165,0.791415 ,0.7978742]]), U=np.array([[0.5]]), true_performance_flag=True)
+# print("max", np.max(out), "np.argmax", test_X[np.argmax(out)])
 # stop = time.time()
-# print(stop - start)
-# # print("Test_matrix",Test_matrix)
+
+# print("Test_matrix",Test_matrix)
 # plt.scatter(test_X, out)
 # plt.show()
 
