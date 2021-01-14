@@ -1402,7 +1402,7 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     # loop over IU parameters / A dims / inf sources.
     DL = []
 
-    number_MC_simulations = range(10,700,10)#[100]#
+    number_MC_simulations = [100]#range(10,700,10)#[100]#
     mean_BICO_value = []
     MSE_BICO_value = []
     number_of_samples = []
@@ -1505,12 +1505,12 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
         mean_BICO_value.append(BICO_value)
         MSE_BICO_value.append(np.std(DL_src)/np.sqrt(len(DL_src)))
         number_of_samples.append(Nd)
-        data["number_MC_samples"] = np.array(number_of_samples).reshape(-1)
-        data["mean"] = np.array(mean_BICO_value).reshape(-1)
-        data["MSE"] = np.array(MSE_BICO_value).reshape(-1)
-        path = "/home/juan/Documents/repos_data/Input-Uncertainty/Computational_Complexity/Monte_Carlo/BICO_MC_Complexity.csv"
-        gen_file = pd.DataFrame.from_dict(data)
-        gen_file.to_csv(path_or_buf=path)
+        # data["number_MC_samples"] = np.array(number_of_samples).reshape(-1)
+        # data["mean"] = np.array(mean_BICO_value).reshape(-1)
+        # data["MSE"] = np.array(MSE_BICO_value).reshape(-1)
+        # path = "/home/juan/Documents/repos_data/Input-Uncertainty/Computational_Complexity/Monte_Carlo/BICO_MC_Complexity.csv"
+        # gen_file = pd.DataFrame.from_dict(data)
+        # gen_file.to_csv(path_or_buf=path)
 
     # raise
     topsrc = np.argmax(DL)
