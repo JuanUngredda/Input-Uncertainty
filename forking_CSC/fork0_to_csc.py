@@ -116,7 +116,7 @@ ALL_CSC_NAMES = ["rilyeno", "torta", "adobo", "bulalo", "kinilaw", "okoy",
 # working with names is a bitch, instead use numbers (tmux panes).
 #U = [0]
 #U = [0,2,3,4,5,6,7,8]
-U = [0,1,3,4,7,8,9,13,14,15]#[0,1,3,4,7,8,9,12,13,14,15, 16]
+U = [0,1,3,4,7,8,9,14,15,16]#[0,1,3,4,7,8,9,12,13,14,15, 16]
 
 CSC_NAMES = [ALL_CSC_NAMES[i] for i in U]
 

@@ -46,7 +46,7 @@ def function_caller(rep):
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
 													  ub=Simulator.amax, d=1)
 
-	proportions = np.linspace(5,40,8)
+	proportions = [25.0, 30.0, 35.0,40.0]#np.linspace(5,40,8)
 	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
 						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,

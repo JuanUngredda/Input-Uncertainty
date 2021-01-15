@@ -232,11 +232,11 @@ class Production_Line():
 # N=1000
 # ub = np.array([[2,2,2,2]])
 # lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
-# X =np.array([[0.1, 7.29685763e-01, 6.65953669e-01]]) # np.random.random((N,D))*(ub-lb) + lb
+# X =np.array([[0.34210363, 0.94824026, 0.91605164]]) # np.random.random((N,D))*(ub-lb) + lb
 # X[:,-1] = 0.5
 #
 # start = time.time()
-# out = Simulator(X[:,:3], X[:,3:], true_performance_flag=True)
+# out = Simulator(X[:,:3], np.array([[0.90549469]]), true_performance_flag=True)
 # out = out.reshape(-1)
 # x_r = X[np.argmax(out)]
 # print("x_r", x_r, "val", np.max(out))
