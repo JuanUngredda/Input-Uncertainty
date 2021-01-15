@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="158df6c8-8553-4a75-8813-78fa6a1bd35d" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_Production_Line_fp.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -200,7 +201,7 @@
       <workItem from="1610106434460" duration="202000" />
       <workItem from="1610106686964" duration="12900000" />
       <workItem from="1610205471133" duration="26469000" />
-      <workItem from="1610385358131" duration="68887000" />
+      <workItem from="1610385358131" duration="71357000" />
     </task>
     <servers />
   </component>
