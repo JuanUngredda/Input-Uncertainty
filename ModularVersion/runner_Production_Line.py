@@ -32,7 +32,7 @@ def function_caller(rep):
 	-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 	"""
-	np.random.seed(rep+150)
+	np.random.seed(rep+400)
 
 	True_rate = 0.5
 	True_Input_distributions = [expon(scale=np.reciprocal(True_rate))]  # [gamma(a=k,loc=0,scale=theta)]#
@@ -60,7 +60,7 @@ def function_caller(rep):
 					  GP_train_relearning = True,
 					  var_data= None,
 					  opt_method="KG_DL",
-					  rep = str(rep+150),
+					  rep = str(rep+400),
 					  save_only_last_stats=True,
 					  calculate_true_optimum=False,
 					  results_name="Production_line_BICO_RESULTS")
