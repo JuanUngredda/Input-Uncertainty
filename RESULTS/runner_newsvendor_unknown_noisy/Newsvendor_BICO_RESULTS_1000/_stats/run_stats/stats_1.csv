@@ -1,0 +1,3 @@
+,X_r,Decision,best_r_quality,top_quality,OC,mean_input,P5_input,P95_input,KG,DL,HP_names,HP_vars,fp,file_number,results_name
+0,[35.6936944],False,0,0,0.5882574537935513,[40.13047824  9.50404088],[39.96362138  8.84993476],[40.29770073 10.27379882],"[array([[22.05541779, 37.78212787, 22.37615695]]), 0.013302859082026164]","[0, 0]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']","[1.21910011e+00 3.35673437e+01 4.34894131e+01 2.41725313e+05
+ 3.43591818e-03]",1000,1,Newsvendor_BICO_RESULTS

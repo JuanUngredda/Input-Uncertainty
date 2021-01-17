@@ -148,6 +148,7 @@ class newsvendor_noisy_2(testfunction):
             for xd in range(XDemand.shape[0]):
                 benefit = p * np.min(XDemand[xd]) - l * x[xd]
                 Benefit[d,xd] = benefit[0]
+
         return Benefit
 
     def __call__(self, x, u, true_performance_flag=False, *args, **kwargs):
@@ -158,6 +159,7 @@ class newsvendor_noisy_2(testfunction):
             Benefit_Simulations = self.true_performance(x, dx=self.dx,dr=self.dr, True_Demand_Samples=self.True_Demand_Samples, p=self.p, l=self.l )
             # print("results",results, "shape", results.shape)
             Expected_Benefit = np.mean(Benefit_Simulations,axis=0)
+            Expected_Benefit = (Expected_Benefit - 15.292935763364486)/94.28618452053284
             return Expected_Benefit.reshape(-1, 1)
 
         else:
@@ -175,7 +177,7 @@ class newsvendor_noisy_2(testfunction):
             self.Assumed_Demand_Samples = self.Assumed_Demand[0](mean, sig, (reps, x.shape[0]))
             Benefit_Simulations = self.core_simulator(X=x,mean=mean,sig=sig,reps=reps, dx=self.dx, dr=self.dr,Assumed_Demand=self.Assumed_Demand_Samples, p=self.p, l=self.l)
             Expected_Benefit = np.mean(Benefit_Simulations,axis=0)
-
+            Expected_Benefit = (Expected_Benefit - 15.292935763364486) / 94.28618452053284
             # print("mean", np.mean(Benefit_Simulations,axis=0),"len",Benefit_Simulations.shape[0],"MSE", np.std(Benefit_Simulations,axis=0)/np.sqrt(Benefit_Simulations.shape[0]))
             return Expected_Benefit.reshape(-1,1)
 
@@ -203,16 +205,22 @@ class newsvendor_noisy_2(testfunction):
 #               [60]])
 # a = np.array([[40,10],
 #               [40,10]])
-True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]  # [gamma(a=k,loc=0,scale=theta)]#
-Assumed_Input_Distributions = [np.random.normal]
+# True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]  # [gamma(a=k,loc=0,scale=theta)]#
+# Assumed_Input_Distributions = [np.random.normal]
 # #
 # # # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
 # # # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
 # # # plt.show()
 # #
-Simulator = newsvendor_noisy_2(True_Demand=True_Input_distributions, Assumed_Demand=Assumed_Input_Distributions)
-# # # start = time.time()
-# # # Simulator(x,a, true_performance_flag=True)
+# Simulator = newsvendor_noisy_2(True_Demand=True_Input_distributions, Assumed_Demand=Assumed_Input_Distributions)
+# N=10000
+# x = np.random.random((N,1))*100
+# a = np.random.random((N,2))*[100,40]
+#
+#
+# out =Simulator(x,a, true_performance_flag=False)
+# print("out", np.mean(out), np.std(out))
+
 # # # stop = time.time()
 # # #
 # # # start = time.time()

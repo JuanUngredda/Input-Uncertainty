@@ -53,9 +53,9 @@ def function_caller(rep):
                                     lb_x=Simulator.xmin, ub_x=Simulator.xmax,
                                     lb_a=Simulator.amin, ub_a=Simulator.amax,
                                     distribution="MUSIG",
-                                    n_fun_init=10,
-                                    n_inf_init=5,
-                                    Budget=105,
+                                    n_fun_init=20,
+                                    n_inf_init=20,
+                                    Budget=100,
                                     Nx=100,
                                     Na=101,
                                     Nd=101,
@@ -64,9 +64,9 @@ def function_caller(rep):
                                     var_data=None,
                                     opt_method="KG_DL",
                                     rep=str(rep),
-                                    save_only_last_stats=True,
+                                    save_only_last_stats=False,
                                     calculate_true_optimum=False,
                                     results_name="Newsvendor_BICO_RESULTS")
 
-
-function_caller(rep=1)
+for r in range(20):
+    function_caller(rep=r)

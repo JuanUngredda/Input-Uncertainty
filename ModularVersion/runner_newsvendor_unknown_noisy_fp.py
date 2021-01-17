@@ -48,15 +48,15 @@ def function_caller(rep):
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
 													  ub=Simulator.amax, d=1)
 
-	proportions = np.linspace(5,40,15)
+	proportions = np.linspace(15,60,10)
 	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
 						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
 						  lb_a = Simulator.amin, ub_a = Simulator.amax,
 						  distribution = "MUSIG",
-						  n_fun_init = 10,
+						  n_fun_init = 20,
 						  n_inf_init = i,
-						  Budget = 105,
+						  Budget = 100,
 						  Nx = 100,
 						  Na = 100,
 						  Nd = 100,
@@ -65,6 +65,8 @@ def function_caller(rep):
 						  var_data= None,
 						  opt_method="KG_fixed_iu",
 						  rep = str(rep),
-					      calculate_true_optimum=False)
+					  	save_only_last_stats=False,
+					  	calculate_true_optimum=False,
+					  	results_name="newsvendor_unkwon_noise_RESULTS")
 
 # function_caller(rep=1)

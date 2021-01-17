@@ -109,7 +109,7 @@ class store_stats():
 
 
     """
-    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, results_name, fp=None, calculate_true_optimum =False, B=None,max_prob = True):
+    def __init__(self,test_func,test_infr, dimX , dimXA, lb,ub, rep, results_name, fp=None, calculate_true_optimum =False, save_only_last_stats=False,B=None,max_prob = True):
 
         self.rep = rep
         self.lb = lb
@@ -141,6 +141,7 @@ class store_stats():
         self.P95_input = []
         self.Decision = []
         self.calculate_true_optimum  =calculate_true_optimum
+        self.save_only_last_stats = save_only_last_stats
         self.results_name = results_name
         if fp is not None:
             self.fp = fp
@@ -164,6 +165,7 @@ class store_stats():
 
             print("kill_signal",kill_signal)
             if kill_signal:
+
                 X_sampled = np.atleast_2d(XA[np.argmax(Y)][:self.dimX])
                 OC= self.test_func( X_sampled, None, true_performance_flag=True)
 
@@ -174,11 +176,18 @@ class store_stats():
                 val_recom = val_recom.reshape(-1)[0]
                 val_opt = np.max([val_recom , OC])
             else:
+                if self.save_only_last_stats:
+                    OC= np.max(Y)#self.test_func( X_sampled, U_sampled, true_performance_flag=False)
+                    X_r = self.recommended_X(model, A_sample)
+                    self.X_r.append(X_r)
+                    OC, val_recom, val_opt = OC, 0, 0
+                else:
 
-                OC= np.max(Y)#self.test_func( X_sampled, U_sampled, true_performance_flag=False)
-                X_r = self.recommended_X(model, A_sample)
-                self.X_r.append(X_r)
-                OC, val_recom, val_opt = OC, 0, 0
+                    X_r = self.recommended_X(model, A_sample)
+                    OC, val_recom, val_opt = self.Opportunity_cost(X_r)
+                    self.X_r.append(X_r)
+                    OC = OC.reshape(-1)[0]
+                    OC, val_recom, val_opt = OC, 0, 0
 
 
         self.OC.append(OC)
@@ -1410,6 +1419,8 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     for Nd in number_MC_simulations:
         y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
         # print("y_Data", y_Data)
+        # plt.hist(y_Data)
+        # plt.show()
         for src in range(len(Data)):
 
 
@@ -1455,18 +1466,27 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
 
                         # print("beg Wi", Wi)
                         # print("invWd[src]",invWd[src])
-                        # plt.scatter(Ad_list[src], Wi)
+                        # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= A_pdf_vals)
+                        # plt.show()
+                        # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= np.reciprocal(invWd[src]))
+                        # plt.show()
+                        # plt.hist(Ad[:,0], density=True)
+                        # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
+                        # plt.show()
+                        # plt.hist(Ad[:,1], density=True)
                         # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
                         # plt.show()
 
-                        Wi = A_pdf_vals * invWd[src]
 
+                        Wi = A_pdf_vals * invWd[src]
+                        # print("Wi", Wi)
+                        # raise
                         # print("np.sum(Wi)",np.sum(Wi))
-                        #Wi = Wi / np.sum(Wi)
+                        Wi = Wi / np.sum(Wi)
                         # raise
                         # print("end Wi", Wi)
                         # now we have weights, get the peak of reweighted GP means
-                        M_X_i = np.mean(M_XA * Wi, axis=1)
+                        M_X_i = np.sum(M_XA * Wi, axis=1)
                         return -M_X_i
 
                 M_X_i = marginal_one_step_ahead(Xd)
@@ -1485,8 +1505,9 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
 
                 #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
                 DL_i = top_fun_val  -cur_top_X_value#- (-marginal_one_step_ahead(cur_topX_index))
-                if DL_i<0:
-                    DL_i=0
+                # print("top_fun_val ,cur_top_X_value",top_fun_val ,cur_top_X_value)
+                # if DL_i<0:
+                    # DL_i=0
                 #assert DL_i >= 0, "Delta Loss can't be negative"
                 # keep this single MC sample of DL improvement
                 # print("DL_i",DL_i)
