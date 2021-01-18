@@ -129,7 +129,7 @@ class newsvendor_noisy_2(testfunction):
         # vals = self.true_performance(np.atleast_2d(x).T)
         # plt.plot(x, vals)
         # plt.show()
-        # raise
+
 
     @staticmethod
     @jit(nopython=True)

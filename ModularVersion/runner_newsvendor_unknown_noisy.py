@@ -53,7 +53,7 @@ def function_caller(rep):
                                     lb_x=Simulator.xmin, ub_x=Simulator.xmax,
                                     lb_a=Simulator.amin, ub_a=Simulator.amax,
                                     distribution="MUSIG",
-                                    n_fun_init=20,
+                                    n_fun_init=10,
                                     n_inf_init=20,
                                     Budget=100,
                                     Nx=100,
@@ -68,5 +68,5 @@ def function_caller(rep):
                                     calculate_true_optimum=False,
                                     results_name="Newsvendor_BICO_RESULTS")
 
-for r in range(20):
+for r in range(3,20,1):
     function_caller(rep=r)

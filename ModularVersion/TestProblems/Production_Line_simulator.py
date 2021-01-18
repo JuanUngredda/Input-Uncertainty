@@ -232,7 +232,7 @@ class Production_Line():
 # N=1000
 # ub = np.array([[2,2,2,2]])
 # lb = np.array([[1e-99,1e-99,1e-99,1e-99]])
-# X =np.array([[1.555068, 0.81732439, 0.71123504]]) # np.random.random((N,D))*(ub-lb) + lb
+# X =np.array([[0.18521628, 0.95627082, 0.95563668]]) # np.random.random((N,D))*(ub-lb) + lb
 # # X[:,-1] = 0.5
 #
 # start = time.time()
