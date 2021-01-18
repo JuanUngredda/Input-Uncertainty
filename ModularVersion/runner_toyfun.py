@@ -27,9 +27,11 @@ def function_caller(rep):
     myoptimizer = Mult_Input_Uncert()
     np.random.seed(rep)
 
+    mu0 = 40
+    mu1 = 40
     # for i in range(0, 90, 5):
     #     print("i",i)
-    True_Input_distributions = [norm(loc=40, scale=np.sqrt(10)), norm(loc=40, scale=np.sqrt(1)),]  # [gamma(a=k,loc=0,scale=theta)]#
+    True_Input_distributions = [norm(loc=mu1, scale=np.sqrt(10)), norm(loc=mu0, scale=np.sqrt(1)),]  # [gamma(a=k,loc=0,scale=theta)]#
 
     # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
     # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
@@ -37,8 +39,8 @@ def function_caller(rep):
 
     Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=np.zeros(2),
                                                       ub=np.ones(2)*100, d=2)
-    Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2)
-    i=5
+    Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2, true_params=[mu0,mu1])
+    i=3
     [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
                         lb_x=Simulator.xmin, ub_x=Simulator.xmax,
                         lb_a=Simulator.amin, ub_a=Simulator.amax,
@@ -49,10 +51,11 @@ def function_caller(rep):
                         Nx=100,
                         Na=101,
                         Nd=101,
-                        GP_train=True,
-                        GP_train_relearning=True,
-                        var_data=None,
+                        GP_train=False,
+                        GP_train_relearning=False,
+                        var_data=np.array([10,1]),
                         opt_method="KG_DL",
+                        Gpy_Kernel=Simulator.KERNEL,
                         rep=str(rep),
                         save_only_last_stats=False,
                         calculate_true_optimum=False,

@@ -140,6 +140,7 @@ class store_stats():
         self.P5_input = []
         self.P95_input = []
         self.Decision = []
+        self.Data_source_sampled = []
         self.calculate_true_optimum  =calculate_true_optimum
         self.save_only_last_stats = save_only_last_stats
         self.results_name = results_name
@@ -191,9 +192,9 @@ class store_stats():
 
 
         self.OC.append(OC)
-
         self.KG.append(KG)
         self.DL.append(DL)
+        self.Data_source_sampled
         self.HP_names.append(HP_names)
         self.HP_values.append(HP_values)
         self.Best_Recommended_Quality.append(val_recom)
@@ -310,7 +311,7 @@ class store_stats():
 
         Xd = self.Xd
 
-        Ad = np.concatenate(A_sample)
+        Ad = np.hstack(A_sample)
         Nx = Xd.shape[0]
         Na = Ad.shape[0]
         # print("Ad", Ad)
@@ -1091,6 +1092,7 @@ class MUSIG_post():
         pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
         return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
 
+
 class trunc_norm_post():
     """
     Given i.i.d observations, builds a posterior density and a sampler
@@ -1152,7 +1154,7 @@ class trunc_norm_post():
         # print("min_ls[self.src_data]",min_ls[self.source_index])
         min_condition = a[:, 0] > min_ls[self.source_index]
         max_condition = a[:, 0] < max_ls[self.source_index]
-        prior = np.logical_and(min_condition , max_condition) *1.0
+        prior = np.logical_and(min_condition, max_condition) * 1.0
         # prior = np.product(1.0 * (min_condition & max_condition), axis=1)
         Lprior[prior != 0] = np.log(prior[prior != 0])
         Lprior[prior == 0] = -np.inf
@@ -1168,8 +1170,11 @@ class trunc_norm_post():
         assert len(a.shape) == 2, "a must be a matrix"
         assert a.shape[1] == 2, "a must have 2 columns"
         mu = a[:, 0]
-        var = a[:, 1]
-        Llikelihood_i = (-1.0 / 2) * (1.0 / var) * ((data_i - mu) ** 2) - np.log(np.sqrt(2 * np.pi * var))
+        #         print("data_i ",data_i )
+        #         print("mu", mu)
+        #         print("var", self.var_arr[self.source_index])
+        Llikelihood_i = (-1.0 / 2) * (1.0 / self.var_arr[self.source_index]) * ((data_i - mu) ** 2) - np.log(
+            np.sqrt(2 * np.pi * self.var_arr[self.source_index]))
         return Llikelihood_i
 
     def norm_const(self):
@@ -1253,12 +1258,12 @@ class trunc_norm_post():
         probabilities = dist * (1 / np.sum(dist))
         domain = domain.reshape(-1)
         probabilities = probabilities.reshape(-1)
-        # print("probabilities", probabilities)
-        # print("n",n)
-        # print("domain", domain)
+        #         print("probabilities", probabilities, probabilities.shape)
+        #         print("n",n)
+        #         print("domain", domain, domain.shape)
         val = np.random.choice(domain, n, p=probabilities)
 
-        return val.reshape(-1,1)
+        return val.reshape(-1, 1)
 
     def post_A_sampler(self, n, src_idx):
         """
@@ -1279,13 +1284,25 @@ class trunc_norm_post():
         assert src_idx + 1 <= len(self.Data_post) and src_idx + 1 >= 1, "source index is out of bounds"
 
         self.var = np.array(self.var_arr[src_idx]).reshape(-1)
+        #         print("src_idx",src_idx)
+        #         print("self.Data_post",self.Data_post)
 
         self.Data_i = self.Data_post[src_idx]
-        Dom_crssprd = self.cross_prod(self.a_arr, self.sig_arr)
+        self.source_index = src_idx
+        #         print("self.Data_i",self.Data_i)
+
+        #         print("self.a_arr, self.sig_arr",self.a_arr[:,src_idx], self.sig_arr[src_idx])
+        Dom_crssprd = self.cross_prod(self.a_arr[:, src_idx], np.array([self.sig_arr[src_idx]]))
         pdf_musig = self.post_dens_unnormalised(Dom_crssprd)
-        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, self.y_n1[:, None]))
-        pdf_yn1 = np.dot(pdf_yn1_musig, pdf_musig)
-        return self.sampler(n, dist=pdf_yn1, domain=self.y_n1)
+        #         print("self.y_n1",self.y_n1)
+        #         print("Dom_crssprd",Dom_crssprd)
+        y_n1 = self.y_n1[:, src_idx]
+        pdf_yn1_musig = np.exp(self.log_lhood_d_i(Dom_crssprd, y_n1[:, None]))
+        #         print("pdf_yn1_musig",pdf_yn1_musig,pdf_yn1_musig.shape )
+        #         print("pdf_musig",pdf_musig, pdf_musig.shape)
+        pdf_yn1 = np.sum(pdf_yn1_musig * pdf_musig, axis=1)
+        return self.sampler(n, dist=pdf_yn1, domain=y_n1).reshape(-1)
+
 
 def KG(mu, sig):
     """
@@ -1687,6 +1704,8 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=500, Nc=5, maxiter=80):
     lb_gen_A = np.min(Ad,axis=0)
     print("ub_gen_A",ub_gen_A)
     print("lb_gen_A ",lb_gen_A )
+    # plt.hist(Ad)
+    # plt.show()
     lhs_ub = np.concatenate((ub_X, ub_gen_A))
     lhs_lb = np.concatenate((lb_X, lb_gen_A))
     XA_Ns = lhs_box(Ns, lb=lhs_lb, ub = lhs_ub ) #lb, ub)

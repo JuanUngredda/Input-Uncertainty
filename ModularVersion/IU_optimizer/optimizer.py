@@ -90,7 +90,7 @@ class Mult_Input_Uncert():
             trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
             and input posterior using uniform prior and gaussian likelihood.
             """
-            if var_data == None:
+            if var_data is None:
                 var_data = np.repeat(1,len(lb_a))
 
             post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var= var_data )
@@ -166,6 +166,9 @@ class Mult_Input_Uncert():
             Gaussian_noise = GPmodel.Gaussian_noise.variance
             if Gaussian_noise < 1e-9:
                 Gaussian_noise = 1e-3
+
+        else:
+            GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), Gpy_Kernel, noise_var=0.01)
 
         while XA.shape[0] + Ndata() < Budget:
             print("Iteration ", XA.shape[0] + Ndata() + 1, ":")

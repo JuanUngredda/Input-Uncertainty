@@ -48,7 +48,7 @@ RETURNS
  output: vector of length nrow(xa)
  """
 
-    def __init__(self, xamin=[0,0], xamax=[100,100], seed=11, x_dim=1, a_dim=1):
+    def __init__(self, xamin=[0,0], xamax=[100,100], seed=11, x_dim=1, a_dim=1, true_params=[40]):
         self.seed = seed
         self.dx = x_dim
         self.da = a_dim
@@ -63,17 +63,28 @@ RETURNS
 
         self.xamin = np.concatenate((self.xmin,self.amin))
         self.xamax = np.concatenate((self.xmax,self.amax))
-
+        self.true_params = np.atleast_2d(np.array(true_params))
         vr = 1.
         ls = 10
         self.HP =  [vr,ls]
         self.KERNEL = GPy.kern.RBF(input_dim=self.dxa, variance=vr, lengthscale=([ls] * self.dxa), ARD=True)
         self.generate_function()
 
-    def __call__(self, x, w, noise_std=0.001, true_performance_flag=True):
+    def __call__(self, x, w=None, noise_std=0.01, true_performance_flag=True):
         if true_performance_flag:
             assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
             assert x.shape[1] == self.dx, "Test_func: wrong x input dimension"
+
+            a = np.repeat(self.true_params, x.shape[0], axis=0)
+            xw = np.hstack([x, a])
+
+            ks = self.KERNEL.K(xw, self.XF)
+            out = np.dot(ks, self.invCZ)
+
+            # print("noise_std",noise_std)
+            E = np.random.normal(0, noise_std, xw.shape[0])
+            # rint("E",E)
+            return (out.reshape(-1, 1) + E.reshape(-1, 1))
 
         else:
 
@@ -83,14 +94,14 @@ RETURNS
             assert x.shape[1] == self.dx, "Test_func: wrong dimension inputed"
             assert w.shape[1] == self.da, "Test_func: wrong dimension inputed"
 
-        xw = np.c_[x,w]
-        ks = self.KERNEL.K(xw, self.XF)
-        out = np.dot(ks, self.invCZ)
+            xw = np.c_[x,w]
+            ks = self.KERNEL.K(xw, self.XF)
+            out = np.dot(ks, self.invCZ)
 
-        #print("noise_std",noise_std)
-        E = np.random.normal(0, noise_std, xw.shape[0])
-        #rint("E",E)
-        return (out.reshape(-1, 1) + E.reshape(-1, 1))
+            #print("noise_std",noise_std)
+            E = np.random.normal(0, noise_std, xw.shape[0])
+            #rint("E",E)
+            return (out.reshape(-1, 1) + E.reshape(-1, 1))
 
     def generate_function(self):
         print("Generating test function")

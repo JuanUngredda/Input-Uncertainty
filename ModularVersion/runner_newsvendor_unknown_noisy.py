@@ -31,7 +31,7 @@ Choose distribution method between:
 
 """
 def function_caller(rep):
-    np.random.seed(rep+15)
+    np.random.seed(rep+200)
     mu = 40.0
     var = 10.0
 
@@ -63,7 +63,7 @@ def function_caller(rep):
                                     GP_train_relearning=True,
                                     var_data=None,
                                     opt_method="KG_DL",
-                                    rep=str(rep+15),
+                                    rep=str(rep+200),
                                     save_only_last_stats=False,
                                     calculate_true_optimum=False,
                                     results_name="Newsvendor_BICO_RESULTS")

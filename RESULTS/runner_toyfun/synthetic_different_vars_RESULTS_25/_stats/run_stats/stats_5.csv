@@ -1,0 +1,2 @@
+,X_r,Decision,best_r_quality,top_quality,OC,mean_input,P5_input,P95_input,KG,DL,HP_names,HP_vars,fp,file_number,results_name
+0,[84.64950204],False,0,0,0.947486621432615,[40.75527977],[39.16783357],[42.28845769],"[array([[26.95122727, 40.75740229, 40.16816765]]), 0.3818582418002832]","[1, 8.748064823238221e-05]","['rbf.variance', 'rbf.lengthscale', 'Gaussian_noise.variance']",[ 1.   10.   10.   10.    0.01],25,5,synthetic_different_vars_RESULTS

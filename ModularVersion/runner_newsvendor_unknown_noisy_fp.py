@@ -31,7 +31,7 @@ def function_caller(rep):
 	-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 	"""
-	np.random.seed(rep+20)
+	np.random.seed(rep+200)
 	mu = 40.0
 	var = 10.0
 
@@ -48,7 +48,7 @@ def function_caller(rep):
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
 													  ub=Simulator.amax, d=1)
 
-	proportions = [4,10,20]
+	proportions = [4.0,10.0,20.0]
 	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
 						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
@@ -64,7 +64,7 @@ def function_caller(rep):
 						  GP_train_relearning = True,
 						  var_data= None,
 						  opt_method="KG_fixed_iu",
-						  rep = str(rep+20),
+						  rep = str(rep+200),
 					  	save_only_last_stats=False,
 					  	calculate_true_optimum=False,
 					  	results_name="newsvendor_unkwon_noise_RESULTS")
