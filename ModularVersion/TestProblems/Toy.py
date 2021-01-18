@@ -70,11 +70,18 @@ RETURNS
         self.KERNEL = GPy.kern.RBF(input_dim=self.dxa, variance=vr, lengthscale=([ls] * self.dxa), ARD=True)
         self.generate_function()
 
-    def __call__(self, x, w, noise_std=1):
-        assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
-        assert len(w.shape) == 2, "x must be an N*d matrix, each row a d point"
-        assert x.shape[1] == self.dx, "Test_func: wrong dimension inputed"
-        assert w.shape[1] == self.da, "Test_func: wrong dimension inputed"
+    def __call__(self, x, w, noise_std=0.001, true_performance_flag=True):
+        if true_performance_flag:
+            assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert x.shape[1] == self.dx, "Test_func: wrong x input dimension"
+
+        else:
+
+            assert x.shape[0] == w.shape[0], "wrong x or u dimensions"
+            assert len(x.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert len(w.shape) == 2, "x must be an N*d matrix, each row a d point"
+            assert x.shape[1] == self.dx, "Test_func: wrong dimension inputed"
+            assert w.shape[1] == self.da, "Test_func: wrong dimension inputed"
 
         xw = np.c_[x,w]
         ks = self.KERNEL.K(xw, self.XF)
@@ -159,7 +166,7 @@ class Information_Source():
         #     self.true_params.append(np.fromiter(dist[0].__dict__["kwds"].values(), dtype=float))
         #print("self.true_params ", self.true_params)
         self.n_srcs = d
-        print("ok")
+
 
     def __call__(self, n, src, *args, **kwargs):
         return self.Distribution[src].rvs(n) #self.f_mean[src] + np.random.normal(size=(n)) * np.sqrt(self.f_cov[src])

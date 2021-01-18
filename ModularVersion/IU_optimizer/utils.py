@@ -1129,7 +1129,7 @@ class trunc_norm_post():
         """
         assert len(src_data) == len(self.var_arr), "different number of variance for number of data sources"
         self.Data_post = src_data
-
+        self.src_data = src_data
         return self.post_dens, self.post_A_sampler, self.post_Data_sampler
 
     def log_prior_A_dens(self, a):
@@ -1143,11 +1143,17 @@ class trunc_norm_post():
         assert a.shape[1] == 2;
         "a must have 2 columns"
         Lprior = np.zeros(len(a))
-        max_ls = self.xmax;
-        min_ls = self.xmin;
-        min_condition = np.vstack((a[:, 0] >= min_ls))
-        max_condition = np.vstack((a[:, 0] <= max_ls))
-        prior = np.product(1.0 * (min_condition & max_condition), axis=1)
+        max_ls = self.xmax
+        min_ls = self.xmin
+
+        print("a[:, 0] ",a[:, 0] )
+        print("min_ls",min_ls)
+        print("self.src_data",self.src_data)
+        print("min_ls[self.src_data]",min_ls[self.src_data])
+        min_condition = a[:, 0] > min_ls[self.src_data]
+        max_condition = a[:, 0] < max_ls[self.src_data]
+        prior = np.logical_and(min_condition , max_condition) *1.0
+        # prior = np.product(1.0 * (min_condition & max_condition), axis=1)
         Lprior[prior != 0] = np.log(prior[prior != 0])
         Lprior[prior == 0] = -np.inf
         return Lprior

@@ -31,7 +31,7 @@ def function_caller(rep):
 	-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 	"""
-	np.random.seed(rep)
+	np.random.seed(rep+20)
 	mu = 40.0
 	var = 10.0
 
@@ -64,7 +64,7 @@ def function_caller(rep):
 						  GP_train_relearning = True,
 						  var_data= None,
 						  opt_method="KG_fixed_iu",
-						  rep = str(rep),
+						  rep = str(rep+20),
 					  	save_only_last_stats=False,
 					  	calculate_true_optimum=False,
 					  	results_name="newsvendor_unkwon_noise_RESULTS")
