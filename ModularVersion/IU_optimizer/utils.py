@@ -1146,12 +1146,12 @@ class trunc_norm_post():
         max_ls = self.xmax
         min_ls = self.xmin
 
-        print("a[:, 0] ",a[:, 0] )
-        print("min_ls",min_ls)
-        print("self.src_data",self.src_data)
-        print("min_ls[self.src_data]",min_ls[self.src_data])
-        min_condition = a[:, 0] > min_ls[self.src_data]
-        max_condition = a[:, 0] < max_ls[self.src_data]
+        # print("a[:, 0] ",a[:, 0] )
+        # print("min_ls",min_ls)
+        # print("self.src_data",self.src_data)
+        # print("min_ls[self.src_data]",min_ls[self.source_index])
+        min_condition = a[:, 0] > min_ls[self.source_index]
+        max_condition = a[:, 0] < max_ls[self.source_index]
         prior = np.logical_and(min_condition , max_condition) *1.0
         # prior = np.product(1.0 * (min_condition & max_condition), axis=1)
         Lprior[prior != 0] = np.log(prior[prior != 0])
@@ -1232,12 +1232,13 @@ class trunc_norm_post():
 
         self.var = np.array(self.var_arr[src_idx]).reshape(-1)
         self.Data_i = self.Data_post[src_idx]
+        self.source_index = src_idx
         self.norm_const()
         a = np.array(a).reshape(-1)
         self.Na = len(a)
         Dom_crssprd = self.cross_prod(a, self.sig_arr)
         pdf_post = self.marg_post_dens(Dom_crssprd)
-        return pdf_post / self.nrm_cnst
+        return pdf_post / self.nrm_cnst[self.source_index]
 
     def sampler(self, n, dist, domain):
         """
@@ -1256,7 +1257,8 @@ class trunc_norm_post():
         # print("n",n)
         # print("domain", domain)
         val = np.random.choice(domain, n, p=probabilities)
-        return val
+
+        return val.reshape(-1,1)
 
     def post_A_sampler(self, n, src_idx):
         """
