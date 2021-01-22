@@ -51,7 +51,7 @@ def function_caller(rep):
                             distribution = "trunc_norm",
                             n_fun_init=10,
                             n_inf_init=4,
-                            Budget=15,
+                            Budget=100,
                             Nx=100,
                             Na=150,
                             Nd=200,
