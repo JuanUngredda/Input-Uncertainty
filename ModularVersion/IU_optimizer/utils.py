@@ -194,7 +194,7 @@ class store_stats():
         self.OC.append(OC)
         self.KG.append(KG)
         self.DL.append(DL)
-        self.Data_source_sampled
+        self.Data_source_sampled.append(DL[0])
         self.HP_names.append(HP_names)
         self.HP_values.append(HP_values)
         self.Best_Recommended_Quality.append(val_recom)
@@ -210,7 +210,7 @@ class store_stats():
         best_r_quality = np.array(self.Best_Recommended_Quality).reshape(-1)
         Best_Quality = np.array(self.Best_Quality).reshape(-1)
         Decision = np.array(self.Decision).reshape(-1)
-
+        Data_source_sampled = np.array(self.Data_source_sampled).reshape(-1)
 
         #file accesed by the decorator to be printed in a csv file.
 
@@ -223,6 +223,7 @@ class store_stats():
                                         P5_input = self.P5_input,
                                         P95_input = self.P95_input,
                                         KG = self.KG,
+                                        Best_ext_src = Data_source_sampled,
                                         DL = self.DL,
                                         HP_names = self.HP_names,
                                         HP_vars = self.HP_values,
@@ -1436,127 +1437,123 @@ def DeltaLoss(model, Data, Xd, Ad, Wd, pst_mkr, lb, ub, Nd=101):
     # loop over IU parameters / A dims / inf sources.
     DL = []
 
-    number_MC_simulations = [100]#range(10,700,10)#[100]#
     mean_BICO_value = []
     MSE_BICO_value = []
     number_of_samples = []
     data = {}
-    for Nd in number_MC_simulations:
-        y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
-        # print("y_Data", y_Data)
-        # plt.hist(y_Data)
-        # plt.show()
-        for src in range(len(Data)):
+
+    y_Data = [cur_Data_sampler(n=Nd, src_idx=src) for src in range(len(Data))]
+
+    for src in range(len(Data)):
+
+        # loop over individual DL samples
+        DL_src = []
+        for i in range(Nd):
+            # sample a new observation and add it to the original Data
+            tmp_Data_i = np.array([y_Data[src][i]])
+
+            tmp_Data = Data[:]
+
+            #######
+            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+            # print("len", len(Wi), len(Ad_list[src]))
+            # plt.scatter(Ad_list[src], Wi, color="blue")
+            #######
+            tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
+
+            # get the importance weights of the Ad points from new posterior
+
+            tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            ##################
+            # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
+            # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
+            # plt.scatter(Ad_list[src], Wi, color="red")
+            # plt.show()
+            #######
+
+            def marginal_one_step_ahead(X):
+                if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
+                    return (1000000)
+                else:
+                    X = np.atleast_2d(X)
+                    Nx_internal = X.shape[0]
+                    XdAd = np.hstack([np.repeat(X, Na, axis=0),
+                                      np.tile(Ad, (Nx_internal, 1))])
+
+                    M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
 
 
-            # loop over individual DL samples
-            DL_src = []
-            for i in range(Nd):
-                # sample a new observation and add it to the original Data
-                tmp_Data_i = np.array([y_Data[src][i]])
+                    A_pdf_vals = tmp_post_A_dens(Ad_list[src], src_idx=src)
 
-                tmp_Data = Data[:]
-
-                #######
-                # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-                # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
-                # print("len", len(Wi), len(Ad_list[src]))
-                # plt.scatter(Ad_list[src], Wi, color="blue")
-                #######
-                tmp_Data[src] = np.concatenate([tmp_Data[src], tmp_Data_i])
-
-                # get the importance weights of the Ad points from new posterior
-
-                tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-                ##################
-                # tmp_post_A_dens, _, _ = pst_mkr(tmp_Data)
-                # Wi = tmp_post_A_dens(Ad_list[src], src_idx=src)
-                # plt.scatter(Ad_list[src], Wi, color="red")
-                # plt.show()
-                #######
-
-                def marginal_one_step_ahead(X):
-                    if np.any(X < lb[:Xd.shape[1]]) or np.any(X > ub[:Xd.shape[1]]):
-                        return (1000000)
-                    else:
-                        X = np.atleast_2d(X)
-                        Nx_internal = X.shape[0]
-                        XdAd = np.hstack([np.repeat(X, Na, axis=0),
-                                          np.tile(Ad, (Nx_internal, 1))])
-
-                        M_XA = model.predict(XdAd)[0].reshape(Nx_internal, Na)
+                    # print("beg Wi", Wi)
+                    # print("invWd[src]",invWd[src])
+                    # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= A_pdf_vals)
+                    # plt.show()
+                    # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= np.reciprocal(invWd[src]))
+                    # plt.show()
+                    # plt.hist(Ad[:,0], density=True)
+                    # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
+                    # plt.show()
+                    # plt.hist(Ad[:,1], density=True)
+                    # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
+                    # plt.show()
 
 
-                        A_pdf_vals = tmp_post_A_dens(Ad_list[src], src_idx=src)
+                    Wi = A_pdf_vals * invWd[src]
+                    # print("Wi", Wi)
+                    # raise
+                    # print("np.sum(Wi)",np.sum(Wi))
+                    Wi = Wi / np.sum(Wi)
+                    # raise
+                    # print("end Wi", Wi)
+                    # now we have weights, get the peak of reweighted GP means
+                    M_X_i = np.sum(M_XA * Wi, axis=1)
+                    return -M_X_i
 
-                        # print("beg Wi", Wi)
-                        # print("invWd[src]",invWd[src])
-                        # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= A_pdf_vals)
-                        # plt.show()
-                        # plt.scatter(Ad_list[src][:,0],Ad_list[src][:,1],c= np.reciprocal(invWd[src]))
-                        # plt.show()
-                        # plt.hist(Ad[:,0], density=True)
-                        # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
-                        # plt.show()
-                        # plt.hist(Ad[:,1], density=True)
-                        # plt.scatter(Ad_list[src], np.reciprocal(invWd[src]))
-                        # plt.show()
-
-
-                        Wi = A_pdf_vals * invWd[src]
-                        # print("Wi", Wi)
-                        # raise
-                        # print("np.sum(Wi)",np.sum(Wi))
-                        Wi = Wi / np.sum(Wi)
-                        # raise
-                        # print("end Wi", Wi)
-                        # now we have weights, get the peak of reweighted GP means
-                        M_X_i = np.sum(M_XA * Wi, axis=1)
-                        return -M_X_i
-
-                M_X_i = marginal_one_step_ahead(Xd)
-                estimated_top_X = Xd[np.argmin(M_X_i)]
-                estimated_top_X = np.atleast_2d(estimated_top_X)
-                anchor_points_inner_opt = np.concatenate((estimated_top_X, cur_topX))
+            M_X_i = marginal_one_step_ahead(Xd)
+            estimated_top_X = Xd[np.argmin(M_X_i)]
+            estimated_top_X = np.atleast_2d(estimated_top_X)
+            anchor_points_inner_opt = np.concatenate((estimated_top_X, cur_topX))
 
 
 
-                # print("estimated_top_X",estimated_top_X)
-                # print("M_X_i",M_X_i)
-                optimised_anchor = np.array([minimize(marginal_one_step_ahead, x_discrete , method = 'Nelder-Mead').x for x_discrete in anchor_points_inner_opt])
-                optimised_anchor_values = marginal_one_step_ahead(optimised_anchor)
-                top_fun_val = -np.min(optimised_anchor_values).reshape(-1)
+            # print("estimated_top_X",estimated_top_X)
+            # print("M_X_i",M_X_i)
+            optimised_anchor = np.array([minimize(marginal_one_step_ahead, x_discrete , method = 'Nelder-Mead').x for x_discrete in anchor_points_inner_opt])
+            optimised_anchor_values = marginal_one_step_ahead(optimised_anchor)
+            top_fun_val = -np.min(optimised_anchor_values).reshape(-1)
 
 
-                #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
-                DL_i = top_fun_val  -cur_top_X_value#- (-marginal_one_step_ahead(cur_topX_index))
-                # print("top_fun_val ,cur_top_X_value",top_fun_val ,cur_top_X_value)
-                # if DL_i<0:
-                    # DL_i=0
-                #assert DL_i >= 0, "Delta Loss can't be negative"
-                # keep this single MC sample of DL improvement
-                # print("DL_i",DL_i)
-                DL_src.append(DL_i)
+            #print("max discrete",np.max(out),"top_val",top_val, "cur_topX_index",marginal_one_step_ahead(cur_topX_index))
+            DL_i = top_fun_val  -cur_top_X_value#- (-marginal_one_step_ahead(cur_topX_index))
+            # print("top_fun_val ,cur_top_X_value",top_fun_val ,cur_top_X_value)
+            # if DL_i<0:
+                # DL_i=0
+            #assert DL_i >= 0, "Delta Loss can't be negative"
+            # keep this single MC sample of DL improvement
+            # print("DL_i",DL_i)
+            DL_src.append(DL_i)
 
-            # get the average over DL samples for this source and save in the list.
-            # print("mean DL", np.mean(DL_src))
-            BICO_value = np.mean(DL_src)
-            print("BICO_value",BICO_value, "MSE", np.std(DL_src)/np.sqrt(len(DL_src)))
-            if BICO_value<0:
-                BICO_value = 0
-            DL.append(BICO_value)
- #       print("np.mean(DL_src)",np.mean(DL_src), "np.MSE(DL_src)",np.std(DL_src)/np.sqrt(len(DL_src)))
+        # get the average over DL samples for this source and save in the list.
+        # print("mean DL", np.mean(DL_src))
+        BICO_value = np.mean(DL_src)
+        print("BICO_value",BICO_value, "MSE", np.std(DL_src)/np.sqrt(len(DL_src)))
+        if BICO_value<0:
+            BICO_value = 0
+        DL.append(BICO_value)
+#       print("np.mean(DL_src)",np.mean(DL_src), "np.MSE(DL_src)",np.std(DL_src)/np.sqrt(len(DL_src)))
 #        raise
-    # get the best source and its DL.
-        mean_BICO_value.append(BICO_value)
-        MSE_BICO_value.append(np.std(DL_src)/np.sqrt(len(DL_src)))
-        number_of_samples.append(Nd)
-        # data["number_MC_samples"] = np.array(number_of_samples).reshape(-1)
-        # data["mean"] = np.array(mean_BICO_value).reshape(-1)
-        # data["MSE"] = np.array(MSE_BICO_value).reshape(-1)
-        # path = "/home/juan/Documents/repos_data/Input-Uncertainty/Computational_Complexity/Monte_Carlo/BICO_MC_Complexity.csv"
-        # gen_file = pd.DataFrame.from_dict(data)
-        # gen_file.to_csv(path_or_buf=path)
+# get the best source and its DL.
+    mean_BICO_value.append(BICO_value)
+    MSE_BICO_value.append(np.std(DL_src)/np.sqrt(len(DL_src)))
+    number_of_samples.append(Nd)
+    # data["number_MC_samples"] = np.array(number_of_samples).reshape(-1)
+    # data["mean"] = np.array(mean_BICO_value).reshape(-1)
+    # data["MSE"] = np.array(MSE_BICO_value).reshape(-1)
+    # path = "/home/juan/Documents/repos_data/Input-Uncertainty/Computational_Complexity/Monte_Carlo/BICO_MC_Complexity.csv"
+    # gen_file = pd.DataFrame.from_dict(data)
+    # gen_file.to_csv(path_or_buf=path)
 
     # raise
     topsrc = np.argmax(DL)

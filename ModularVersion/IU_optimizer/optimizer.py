@@ -199,7 +199,6 @@ class Mult_Input_Uncert():
             A_density, A_sampler, _ = post_maker(Data)
             # print("inf_src.n_srcs",inf_src.n_srcs)
 
-
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
 
