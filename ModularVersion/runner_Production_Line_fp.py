@@ -32,7 +32,7 @@ def function_caller(rep):
 	-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 	"""
-	np.random.seed(rep+300)
+	np.random.seed(rep+360)
 
 	True_rate = 0.5
 	True_Input_distributions = [expon(scale=np.reciprocal(True_rate))]  # [gamma(a=k,loc=0,scale=theta)]#
