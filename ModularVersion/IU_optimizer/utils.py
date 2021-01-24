@@ -1682,7 +1682,7 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=500, Nc=5, maxiter=80):
                 # print("xa", xa)
                 # print("XdAd", XdAd, "S_Xd", S_Xd)
                 # print("XdAd", np.concatenate((XdAd,S_Xd)))
-
+                # print("max mu", np.max(MM), "predicted", out+np.max(MM))
                 KG_Mc_Input.bestEVI = out
                 KG_Mc_Input.bestxa = xa
             return -out
@@ -1699,8 +1699,8 @@ def KG_Mc_Input(model, Xd, Ad, lb, ub, Ns=500, Nc=5, maxiter=80):
 
     ub_gen_A = np.max(Ad,axis=0)
     lb_gen_A = np.min(Ad,axis=0)
-    print("ub_gen_A",ub_gen_A)
-    print("lb_gen_A ",lb_gen_A )
+    # print("ub_gen_A",ub_gen_A)
+    # print("lb_gen_A ",lb_gen_A )
     # plt.hist(Ad)
     # plt.show()
     lhs_ub = np.concatenate((ub_X, ub_gen_A))

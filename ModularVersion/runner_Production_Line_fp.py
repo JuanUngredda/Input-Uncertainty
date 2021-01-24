@@ -32,7 +32,7 @@ def function_caller(rep):
 	-MUSIG : Normal Likelihood and Uniform prior for input. Assumes unknown variance in the data.
 
 	"""
-	np.random.seed(rep+360)
+	np.random.seed(rep+600)
 
 	True_rate = 0.5
 	True_Input_distributions = [expon(scale=np.reciprocal(True_rate))]  # [gamma(a=k,loc=0,scale=theta)]#
@@ -46,7 +46,7 @@ def function_caller(rep):
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,
 													  ub=Simulator.amax, d=1)
 
-	proportions = [5.0, 10.0 , 15.0, 20.0, 25.0, 30.0, 35.0,40.0]#np.linspace(5,40,8)
+	proportions = [5.0, 25.0, 30.0, 35.0]#np.linspace(5,40,8)
 	for i in proportions:
 		[XA], [Y], [Data] = myoptimizer( sim_fun = Simulator, inf_src= Information_Source_Generator,
 						  lb_x = Simulator.xmin, ub_x = Simulator.xmax,
@@ -62,7 +62,7 @@ def function_caller(rep):
 						  GP_train_relearning = True,
 						  var_data= None,
 						  opt_method="KG_fixed_iu",
-						  rep = str(rep+300),
+						  rep = str(rep+600),
 						  save_only_last_stats=True,
 					      calculate_true_optimum=False,
 						  results_name="Production_line_Fixed_Proportion_")

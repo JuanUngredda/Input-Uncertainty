@@ -81,10 +81,7 @@ RETURNS
             ks = self.KERNEL.K(xw, self.XF)
             out = np.dot(ks, self.invCZ)
 
-            # print("noise_std",noise_std)
-            E = np.random.normal(0, noise_std, xw.shape[0])
-            # rint("E",E)
-            return (out.reshape(-1, 1) + E.reshape(-1, 1))
+            return out.reshape(-1, 1)
 
         else:
 

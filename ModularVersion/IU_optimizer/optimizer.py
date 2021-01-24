@@ -176,17 +176,16 @@ class Mult_Input_Uncert():
             if GP_train_relearning == True:
 
                 Gaussian_noise = 0.01
-                if GP_train == True:
-                    # print("XA", XA)
-                    # print("Y", Y)
-                    GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
-                    GPmodel.Gaussian_noise.variance.constrain_bounded(1e-4, 0.2)
-                    GPmodel.optimize_restarts(10, robust=True, verbose=True)
 
+                GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+                GPmodel.Gaussian_noise.variance.constrain_bounded(1e-4, 0.2)
+                GPmodel.optimize_restarts(10, robust=True, verbose=True)
 
-                    Gaussian_noise = GPmodel.Gaussian_noise.variance
-                    if Gaussian_noise < 1e-9:
-                        Gaussian_noise = 1e-3
+                Gaussian_noise = GPmodel.Gaussian_noise.variance
+                if Gaussian_noise < 1e-9:
+                    Gaussian_noise = 1e-3
+            else:
+                GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
                     # GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)
             # Fit model to simulation data.
 
@@ -283,11 +282,17 @@ class Mult_Input_Uncert():
             XA = np.vstack([XA, topxa])
             Y = np.concatenate([Y, new_y])
 
+
+
         else:
             # if info source is better
             new_d = inf_src(n=1, src=topsrc)
             print("new_d", new_d, "Data[topsrc]", Data[topsrc])
             Data[topsrc] = np.concatenate([Data[topsrc], new_d.reshape(-1)])
+
+        print("XA", XA)
+        print("Y", Y)
+        print("Data", Data)
         return XA,Y,Data
 
     def KG_alg(self , sim_fun,inf_src,GPmodel, XA,
