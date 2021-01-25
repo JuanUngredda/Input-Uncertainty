@@ -65,4 +65,4 @@ def function_caller(rep):
                             calculate_true_optimum=False,
                             results_name="synthetic_different_vars_"+str(var0)+"_"+str(var1)+"_RESULTS")
 
-function_caller(rep=5)
+# function_caller(rep=5)
