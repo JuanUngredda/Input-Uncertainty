@@ -31,8 +31,9 @@ def function_caller(rep):
     for v_mx in var_mix:
         mu0 = 40
         mu1 = 40
-        var0 = v_mx[0]
-        var1 = v_mx[1]
+        var0 = 5
+        var1 = 10
+
         # for i in range(0, 90, 5):
         #     print("i",i)
         True_Input_distributions = [norm(loc=mu0, scale=np.sqrt(var0)), norm(loc=mu1, scale=np.sqrt(var1)),]  # [gamma(a=k,loc=0,scale=theta)]#
@@ -44,25 +45,29 @@ def function_caller(rep):
         Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=np.zeros(2),
                                                           ub=np.ones(2)*100, d=2)
         Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2, true_params=[mu0,mu1])
-        i=3
-        [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
-                            lb_x=Simulator.xmin, ub_x=Simulator.xmax,
-                            lb_a=Simulator.amin, ub_a=Simulator.amax,
-                            distribution = "trunc_norm",
-                            n_fun_init=10,
-                            n_inf_init=4,
-                            Budget=100,
-                            Nx=100,
-                            Na=150,
-                            Nd=200,
-                            GP_train=False,
-                            GP_train_relearning=False,
-                            var_data=np.array([var0,var1]),
-                            opt_method="KG_DL",
-                            Gpy_Kernel=Simulator.KERNEL,
-                            rep=str(rep),
-                            save_only_last_stats=False,
-                            calculate_true_optimum=False,
-                            results_name="synthetic_different_vars_"+str(var0)+"_"+str(var1)+"_RESULTS")
+
+
+        for m0 in range(2,50,5):
+            for m1 in range(2,50,5):
+
+                [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
+                                    lb_x=Simulator.xmin, ub_x=Simulator.xmax,
+                                    lb_a=Simulator.amin, ub_a=Simulator.amax,
+                                    distribution = "trunc_norm",
+                                    n_fun_init=10,
+                                    n_inf_init=np.array([m0,m1]),
+                                    Budget=100,
+                                    Nx=100,
+                                    Na=150,
+                                    Nd=200,
+                                    GP_train=False,
+                                    GP_train_relearning=False,
+                                    var_data=np.array([var0,var1]),
+                                    opt_method="KG_fixed_iu",
+                                    Gpy_Kernel=Simulator.KERNEL,
+                                    rep=str(rep),
+                                    save_only_last_stats=False,
+                                    calculate_true_optimum=False,
+                                    results_name="synthetic_different_vars_fp_"+str(m0)+"_"+str(m1)+"_RESULTS")
 
 # function_caller(rep=5)

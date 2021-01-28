@@ -129,7 +129,6 @@ class Mult_Input_Uncert():
         # ker.lengthscale.constrain_bounded(0, np.max(ub - lb) * 0.40)
 
         if Gpy_Kernel != None:
-            print("true jeje")
             ker = Gpy_Kernel
 
 
@@ -138,20 +137,34 @@ class Mult_Input_Uncert():
         dim_A =  inf_src.n_srcs #lb.shape[0] - dim_X
         # print("lb.shape[0], dim_X", lb.shape[0] ,dim_X)
         # raise
-        alloc = np.arange(n_inf_init) % dim_A
-        alloc = [np.sum(alloc == i) for i in range(dim_A)]
-        Data = [inf_src(n=alloc[i], src=i) for i in range(dim_A)]
+        if type(n_inf_init) is int:
+            alloc = np.arange(n_inf_init) % dim_A
+            alloc = [np.sum(alloc == i) for i in range(dim_A)]
+            Data = [inf_src(n=alloc[i], src=i) for i in range(dim_A)]
+        elif (type(n_inf_init) is np.ndarray) | (type(n_inf_init) is list):
+            n_inf_init = np.array(n_inf_init)
+            n_inf_init = np.round(n_inf_init)
+
+            assert np.any(n_inf_init <0) == False, "Please insert an allocation greater than 0"
+            assert len(n_inf_init)  == dim_A, "Dimension of allocation for data sources != DimA"
+
+            Data = [inf_src(n=n_inf_init[i], src=i) for i in range(dim_A)]
+        else:
+            print("please introduce np.array,or list to specify number of samples. Insert int for uniform allocation")
+            raise
         print("DATA", Data)
+
         # this can be called at any time to get the number of Data collected
         Ndata = lambda: np.sum([d_src.shape[0] for d_src in Data])
 
-        print("Initialization complete, budget used: ", n_fun_init + n_inf_init, "\n")
+
+        print("Initialization complete, budget used: ", n_fun_init + np.sum(n_inf_init), "\n")
 
         print("\nStoring Data...")
         # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
 
 
-        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp=str(n_inf_init), B=int(Budget-n_inf_init) , rep=rep,results_name=results_name,
+        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp=str(np.sum(n_inf_init)), B=int(Budget-np.sum(n_inf_init)) , rep=rep,results_name=results_name,
                             save_only_last_stats=save_only_last_stats,calculate_true_optimum=self.calculate_true_optimum)
 
         # Let's get the party started!

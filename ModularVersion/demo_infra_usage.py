@@ -3,7 +3,7 @@ import sys
 import subprocess as sp
 import os
 import argparse
-from runner_toyfun import function_caller
+from runner_toyfun_fp import function_caller
 # This is a bare script that receives args, prints something, wastes some time,
 # and saves something. Use this as a blank template to run experiments.
 # The sys.argv = [demo_infra_usage.py (time_stamped_folder) (integer)]
