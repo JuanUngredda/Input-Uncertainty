@@ -207,7 +207,10 @@ class Mult_Input_Uncert():
 
             # KG+DL take a standard unweighted average over A_grid, i.e. A_grid must
             # be samples from posterior over A! Don't use linspace!
-
+            # print("Data", Data)
+            # print("XA", XA)
+            # print("Y", Y)
+            # raise
             A_density, A_sampler, _ = post_maker(Data)
             # print("inf_src.n_srcs",inf_src.n_srcs)
 
@@ -237,6 +240,7 @@ class Mult_Input_Uncert():
             else:
                 raise NotImplementedError
 
+            raise
         return [XA], [Y], [Data]
 
     def KG_DL_alg(self , sim_fun,inf_src,GPmodel, XA,

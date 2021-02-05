@@ -47,8 +47,8 @@ def function_caller(rep):
         Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2, true_params=[mu0,mu1])
 
 
-        for m0 in [7, 9, 11, 12, 13, 15, 17, 19, 20]: #range(2,50,5):
-            for m1 in [7, 9, 11, 12, 13, 15, 17, 19, 20]: # range(2,50,5):
+        for m0 in [2,30,40]:#[7, 9, 11, 12, 13, 15, 17, 19, 20]: #range(2,50,5):
+            for m1 in [2 , 7, 9, 11, 12, 13, 15, 17, 19, 20, 30, 40]: # range(2,50,5):
                 np.random.seed(rep)
                 [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
                                     lb_x=Simulator.xmin, ub_x=Simulator.xmax,
@@ -70,4 +70,4 @@ def function_caller(rep):
                                     calculate_true_optimum=False,
                                     results_name="synthetic_different_vars_fp_"+str(m0)+"_"+str(m1)+"_RESULTS")
 
-# function_caller(rep=5)
+# function_caller(rep=9)
