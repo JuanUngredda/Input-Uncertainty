@@ -239,8 +239,7 @@ class Mult_Input_Uncert():
                                            Nd, lb, ub,stats,dim_X)
             else:
                 raise NotImplementedError
-
-            raise
+            
         return [XA], [Y], [Data]
 
     def KG_DL_alg(self , sim_fun,inf_src,GPmodel, XA,
