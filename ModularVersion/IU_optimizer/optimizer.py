@@ -22,7 +22,7 @@ class Mult_Input_Uncert():
                       GP_train = True,
                       GP_train_relearning=False,
                       Gpy_Kernel = None,
-                      opt_method = "KG_DL", rep = None,
+                      opt_method = "BICO", rep = None,
                        save_only_last_stats=False,
                       calculate_true_optimum=True,
                     results_name="SIM_RESULTS"):
@@ -47,6 +47,9 @@ class Mult_Input_Uncert():
         :param var_data: int, True variance of Data for inference in distribution "KG_fixed_iu".
         :param Gpy_Kernel: GPy object, include GPy kernel with learnt hyperparameters.
         :param GP_train: Bool. True, Hyperparameters are trained in every iteration. False, uses pre-set parameters
+        :param save_only_last_stats: Bool. True, only compute True performance in the end. False, compute at each
+        iteration. True setting is recommended for expensive experiments.
+        :param: calculate_true_optimum. True. Produces noisy performance instead of real expected performance.
         :param opt_method: Method for IU-optimisation:
                -"KG_DL": Compares Knowledge Gradient and Delta Loss for every iteration of the algorithm.
                -"KG_fixed_iu": Updates the Data/Input posterior initially with n_inf_init and only
@@ -60,6 +63,7 @@ class Mult_Input_Uncert():
             Data: list of array of inf_src observations
 
             """
+
         self.calculate_true_optimum = calculate_true_optimum
         self.kill_signal = False
         lb_x = lb_x.reshape(-1)
@@ -67,10 +71,10 @@ class Mult_Input_Uncert():
 
         lb_a = lb_a.reshape(-1)
         ub_a = ub_a.reshape(-1)
-        # print("ub_x,ub_a",ub_x,ub_a)
+
         lb = np.concatenate((lb_x,lb_a))
         ub = np.concatenate((ub_x,ub_a))
-        # print("lb", lb, "ub", ub)
+
         dim_X = sim_fun.dx
 
         lb = lb.reshape(-1)
@@ -81,8 +85,6 @@ class Mult_Input_Uncert():
         assert np.all(lb <= ub), "lower must be below upper!"
 
         assert ub.shape[0] == lb.shape[0], "lb and ub must be the same shape!"
-        # assert np.all(IU_dims<ub.shape[0]); "IU_dims out of too high!"
-        # assert np.all(IU_dims>=0); "IU_dims too low!"
 
         # set the distribution to use for A dimensions.
         if distribution == "trunc_norm":
@@ -126,17 +128,14 @@ class Mult_Input_Uncert():
         Y = sim_fun(XA[:,0:dim_X], XA[:,dim_X:XA.shape[1]])
         ker = GPy.kern.RBF(input_dim=lb.shape[0], variance=10000., lengthscale=(ub - lb) * 0.1, ARD=True)
 
-        # ker.lengthscale.constrain_bounded(0, np.max(ub - lb) * 0.40)
-
         if Gpy_Kernel != None:
             ker = Gpy_Kernel
 
 
 
         # Initilize input uncertainty data via round robin allocation
-        dim_A =  inf_src.n_srcs #lb.shape[0] - dim_X
-        # print("lb.shape[0], dim_X", lb.shape[0] ,dim_X)
-        # raise
+        dim_A =  inf_src.n_srcs
+
         if type(n_inf_init) is int:
             alloc = np.arange(n_inf_init) % dim_A
             alloc = [np.sum(alloc == i) for i in range(dim_A)]
@@ -152,7 +151,6 @@ class Mult_Input_Uncert():
         else:
             print("please introduce np.array,or list to specify number of samples. Insert int for uniform allocation")
             raise
-        print("DATA", Data)
 
         # this can be called at any time to get the number of Data collected
         Ndata = lambda: np.sum([d_src.shape[0] for d_src in Data])
@@ -205,20 +203,12 @@ class Mult_Input_Uncert():
             # Discretize X by lhs and discretize A with posterior samples as required.
             X_grid = X_sampler(Nx)
 
-            # KG+DL take a standard unweighted average over A_grid, i.e. A_grid must
-            # be samples from posterior over A! Don't use linspace!
-            # print("Data", Data)
-            # print("XA", XA)
-            # print("Y", Y)
-            # raise
+            # be samples from posterior over A!
             A_density, A_sampler, _ = post_maker(Data)
-            # print("inf_src.n_srcs",inf_src.n_srcs)
 
             A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
             W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
 
-            # print("A_grid[i]",A_grid[0][np.argmin(W_A)])
-            # print("W_A", np.min(W_A))
 
             # Get KG of both simulation and Input uncertainty.
 
@@ -228,12 +218,12 @@ class Mult_Input_Uncert():
                 self.kill_signal = False
 
 
-            if opt_method == "KG_DL":
+            if opt_method == "BICO":
 
-                XA,Y,Data = self.KG_DL_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
+                XA,Y,Data = self.BICO_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)
-            elif opt_method == "KG_fixed_iu":
+            elif opt_method == "Benchmark":
                 XA,Y,Data = self.KG_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)
@@ -242,7 +232,7 @@ class Mult_Input_Uncert():
 
         return [XA], [Y], [Data]
 
-    def KG_DL_alg(self , sim_fun,inf_src,GPmodel, XA,
+    def BICO_alg(self , sim_fun,inf_src,GPmodel, XA,
                   Y, Data, X_grid, A_grid, W_A,
                   post_maker, Nd, lb, ub,stats,dim_X):
         """
@@ -270,12 +260,15 @@ class Mult_Input_Uncert():
             Data: list of array of inf_src observations
         """
 
+        #Combutes Value of information for simualtion data
         topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
         print("Best is simulator: ", topxa, topKG)
 
+        #Computes Value of Information for external data
         topsrc, topDL = DeltaLoss(GPmodel, Data, X_grid, A_grid, W_A, post_maker,  lb, ub, Nd)
         print("Best is info source: ", topsrc, topDL)
 
+        #Compute statistics and produce file
         stats(model = GPmodel,
               Data = Data,
               XA = XA,
@@ -288,6 +281,7 @@ class Mult_Input_Uncert():
               HP_names=GPmodel.parameter_names(),
               HP_values=GPmodel.param_array)
 
+        #Update Data set variables
         if topKG > topDL:
             # if simulation is better
             print("topxa", topxa)
@@ -297,8 +291,6 @@ class Mult_Input_Uncert():
 
             XA = np.vstack([XA, topxa])
             Y = np.concatenate([Y, new_y])
-
-
 
         else:
             # if info source is better
@@ -339,6 +331,7 @@ class Mult_Input_Uncert():
             Data: list of array of inf_src observations
         """
 
+        #Combutes Value of information for simualtion data
         topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
         print("Best is simulator: ", topxa, topKG)
 

@@ -8,9 +8,6 @@ from IU_optimizer import *
 from TestProblems.Toy import GP_test
 from TestProblems import Information_Source
 
-
-
-
 # # now run the optimizer 100 times and save all outputs
 """
 Choose optimsiation method between:

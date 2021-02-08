@@ -2,16 +2,36 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="158df6c8-8553-4a75-8813-78fa6a1bd35d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/ModularVersion/runner_toyfun_fp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/IU_optimizer/optimizer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ModularVersion/demo_infra_usage.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/demo_infra_usage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/master_runner_stats/run_stats/stats_0.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/master_runner_stats/time/time_DeltaLoss.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/master_runner_stats/time/time_KG_Mc_Input.csv" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/ModularVersion/runner_toyfun.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_toyfun.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/RESULTS/runner_toyfun/synthetic_different_vars_5_10_RESULTS_4/_stats/run_stats/stats_5.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/RESULTS/runner_toyfun_stats/time/time_DeltaLoss.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/RESULTS/runner_toyfun_stats/time/time_KG_Mc_Input.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/RESULTS/runner_toyfun_stats/time/time_func_caller.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/forking_CSC/fork0_to_csc.py" beforeDir="false" afterPath="$PROJECT_DIR$/forking_CSC/fork0_to_csc.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_toyfun_fp.py" beforeDir="false" afterPath="$PROJECT_DIR$/ModularVersion/runner_toyfun_fp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_toyfun_stats/run_stats/stats_0.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_toyfun_stats/time/time_KG_Mc_Input.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ModularVersion/runner_toyfun_stats/time/time_func_caller.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/Ambulance_simulator.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/Toy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/ambulances.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/ato_hongnelson.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/ato_hotstart.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/experiments1d.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/experiments2d.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/experimentsNd.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/lunar_lander.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/lunar_lander_early_stop.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/lunar_lander_hard.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/mlp.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/robopush.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/rover.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/space.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TestProblems/synthetics.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/input_uncertainty.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/input_uncertainty_general.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,7 +77,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/ModularVersion" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="Settings.Markdown" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -210,6 +230,7 @@
       <workItem from="1610106686964" duration="12900000" />
       <workItem from="1610205471133" duration="26469000" />
       <workItem from="1610385358131" duration="135153000" />
+      <workItem from="1612721916576" duration="6802000" />
     </task>
     <servers />
   </component>
@@ -245,6 +266,6 @@
     <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_Production_Line.coverage" NAME="runner_Production_Line Coverage Results" MODIFIED="1610979632963" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$optimizer.coverage" NAME="optimizer Coverage Results" MODIFIED="1605803795103" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/IU_optimizer" />
     <SUITE FILE_PATH="coverage/Input_Uncertainty$Production_Line_simulator.coverage" NAME="Production_Line_simulator Coverage Results" MODIFIED="1610927451505" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion/TestProblems" />
-    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_toyfun_fp.coverage" NAME="runner_toyfun_fp Coverage Results" MODIFIED="1611867844747" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
+    <SUITE FILE_PATH="coverage/Input_Uncertainty$runner_toyfun_fp.coverage" NAME="runner_toyfun_fp Coverage Results" MODIFIED="1612787977845" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ModularVersion" />
   </component>
 </project>

@@ -35,7 +35,7 @@ def function_caller(rep):
         var1 = v_mx[1]
         # for i in range(0, 90, 5):
         #     print("i",i)
-        True_Input_distributions = [norm(loc=mu0, scale=np.sqrt(var0)), norm(loc=mu1, scale=np.sqrt(var1)),]  # [gamma(a=k,loc=0,scale=theta)]#
+        True_Input_distributions = [norm(loc=mu0, scale=np.sqrt(var0)), norm(loc=mu1, scale=np.sqrt(var1)),]
 
         # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
         # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
@@ -44,7 +44,7 @@ def function_caller(rep):
         Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=np.zeros(2),
                                                           ub=np.ones(2)*100, d=2)
         Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2, true_params=[mu0,mu1])
-        i=3
+
         [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
                             lb_x=Simulator.xmin, ub_x=Simulator.xmax,
                             lb_a=Simulator.amin, ub_a=Simulator.amax,
