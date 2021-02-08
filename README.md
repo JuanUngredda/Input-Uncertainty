@@ -15,7 +15,7 @@ Collection and Optimisation (BICO) that, in each iteration, automatically determ
 simulations or data collection) is more beneficial.
 
 
-Author Details:
+First Author Details:
 
 - e-mail: j.ungredda@warwick.ac.uk
 - Academic Profile: https://warwick.ac.uk/fac/sci/mathsys/people/students/2017intake/ungredda/ 
