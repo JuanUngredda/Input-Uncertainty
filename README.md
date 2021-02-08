@@ -1,5 +1,7 @@
 # Bayesian Optimisation vs. Input Uncertainty Reduction
 
+Code for paper "Bayesian Optimisation vs. Input Uncertainty Reduction" https://arxiv.org/abs/2006.00643
+
 Simulators often require calibration inputs estimated from real world data and the quality of the estimate can significantly
 affect simulation output. Particularly when performing simulation optimisation to find an optimal solution, the uncertainty in
 the inputs significantly affects the quality of the found solution. One remedy is to search for the solution that has the best
@@ -12,10 +14,11 @@ value of information procedure, we propose a novel unified simulation optimisati
 Collection and Optimisation (BICO) that, in each iteration, automatically determines which of the two actions (running
 simulations or data collection) is more beneficial.
 
-Code for paper "Bayesian Optimisation vs. Input Uncertainty Reduction" https://arxiv.org/abs/2006.00643
 
 Author Details:
-e-mail: 
+
+- e-mail: j.ungredda@warwick.ac.uk
+- Academic Profile: https://warwick.ac.uk/fac/sci/mathsys/people/students/2017intake/ungredda/ 
 
 ## Requirements
 We strongly recommend using the anaconda python distribution and python version 3.8.6. With anaconda you can install all packages as following 
@@ -33,6 +36,107 @@ numpy version 1.19.4
 pandas version 1.2.0
 pydoe version 0.3.8
 scipy version 1.6.0
+```
+
+#Test Functions
+
+##Synthetic test function
+
+We consider a test function generated from a Gaussian process with a squared exponential kernel with known 
+hyper-parameters. To model input uncertainty, we assume a uniform prior and normally distributed data sources with 
+unknown mean and known variance.
+
+##Newsvendor Simulation Optimisation
+
+We consider the problem of a newsvendor, who must decide how many copies of the day's paper to stock in the face of 
+uncertain demand and where any unsold copies will be worthless at the end of the day. Therefore, the simulation depends 
+on the number of copies of the day's paper and the uncertain paremeters of a Normally distrubuted demand, which must be
+estimated from real-data acquisition.
+
+##Production Line Optimisation
+
+Suppose a production line of a manufacturing plant with 3 service queues of finite capacity are arranged in a row.
+Parts leaving after service are immediately transferred to the next queue. In case the next machine is busy, and with 
+full service queue, then the previous machine must stop working until the next machine is free since
+there is no room in the next queue. Parts arrive to queue 1 according to a Poisson process and the service time is 
+exponentially distributed. The arrival rate is an unknown parameter in the simulation and must be estimated through 
+real-data acquisition. The decision variables to be optimised are the service times of the machines.
+
+
+# Inference Methods included
+
+We consider bayesian inference methods using the Gamma family. For the Synthetic test function and newsvendor Simulation 
+Optimisation problems methods assuming normally distributed data with known and unknown variance where implemented. 
+Closed-form solutions are computed using appropiate priors that are conjugate to the likelihood functions.
+
+For the Production Line Optimisation we assume a non-informative Gamma prior, which is a conjugate prior of the Gamma 
+distribution. All inference methods may be found in "/ModularVersion/utils.py" with the following format.
+
+```
+class Probability_Density():
+    """ Given i.i.d observations, builds a posterior density and a sampler
+    (which can then be used with Delta Loss).
+    Inference details:
+    Normal Likelihood
+    Prior over mu and variance
+
+    ARGS
+        src_data: matrix of observations for a given source
+        xmin = lower bound
+        xmax = upper bound
+
+
+    RETURNS
+        post_dens: pdf over input domain A. Method: iu_pdf
+        post_dens_samples: samples over post_dens. Method: iu_pdf_sampler
+        post_predict_sampler: samples from posterior predictive density ynew. Method: data_predict_sampler
+
+    """
+
+    def __init__(self):
+
+    def __call__(self, src_data):
+        """
+
+        :param src_data: list of narrays. include whole data.
+        :return: functions post_dens: posterior density distribution given source. post_A_sampler: samples from
+        posterior density distribution.
+        """
+
+        self.Data_post = src_data
+        return self.post_dens, self.post_A_sampler, self.post_Data_sampler
+
+    def post_dens(self, a, src_idx):
+        """
+        Posterior marginilised density estimation over A. First models posterior over
+        the parameter A and uncertainty sigma from input source. Then marginilises out sigma
+        and normalise the distribution over A
+
+        :param a: values over domain of A to calculate pdf.
+        :return: pdf calculated in a
+        """
+        density = pdf(a, Data, src_idx) #Compute density value for a.
+        return np.array(density).reshape(-1)
+
+    def post_A_sampler(self, n, src_idx):
+        """
+        Sampler for posterior marginilised density over input A
+        :param n: number of samples for posterior density over A
+        :return: samples over domain
+        """
+
+        samples = pdf_rvs(n, src_idx) #Compute samples according to pdf and collected data
+        return samples
+
+    def post_Data_sampler(self, n, src_idx):
+        """
+        Sampler for posterior predictive density ynew
+        :param n: number of samples for posterior predictive density
+        :return: samples over domain
+        """
+        samples = predictive_rvs(n, src_idx) #Compute samples according to predictive pdf of data and collected data
+        return samples
+
 ```
 
 # Tutorial
