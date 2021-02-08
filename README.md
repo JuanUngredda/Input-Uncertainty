@@ -38,22 +38,22 @@ pydoe version 0.3.8
 scipy version 1.6.0
 ```
 
-#Test Functions
+# Test Functions
 
-##Synthetic test function
+## Synthetic test function
 
 We consider a test function generated from a Gaussian process with a squared exponential kernel with known 
 hyper-parameters. To model input uncertainty, we assume a uniform prior and normally distributed data sources with 
 unknown mean and known variance.
 
-##Newsvendor Simulation Optimisation
+## Newsvendor Simulation Optimisation
 
 We consider the problem of a newsvendor, who must decide how many copies of the day's paper to stock in the face of 
 uncertain demand and where any unsold copies will be worthless at the end of the day. Therefore, the simulation depends 
 on the number of copies of the day's paper and the uncertain paremeters of a Normally distrubuted demand, which must be
 estimated from real-data acquisition.
 
-##Production Line Optimisation
+## Production Line Optimisation
 
 Suppose a production line of a manufacturing plant with 3 service queues of finite capacity are arranged in a row.
 Parts leaving after service are immediately transferred to the next queue. In case the next machine is busy, and with 
