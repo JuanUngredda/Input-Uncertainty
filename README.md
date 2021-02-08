@@ -256,8 +256,8 @@ algorithm, solutions to replicate the results are shown in /RESULTS folder with 
         iteration. True setting is recommended for expensive experiments.
         calculate_true_optimum. True. Produces noisy performance instead of real expected performance.
         opt_method: Method for IU-optimisation:
-               -"KG_DL": Compares Knowledge Gradient and Delta Loss for every iteration of the algorithm.
-               -"KG_fixed_iu": Updates the Data/Input posterior initially with n_inf_init and only
+               -"BICO": Compares Value of Information for external data sources and simulation at every iteration of the algorithm.
+               -"Benchmark": Updates the Input posterior initially with n_inf_init and only
                uses Knowledge gradient.
 
         :param rep: int, number that identifies one specific run of the experiment (whole budget)
