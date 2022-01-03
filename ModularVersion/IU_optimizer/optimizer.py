@@ -1,334 +1,357 @@
+from .utils import *
 import GPy
-import csv
 import numpy as np
-import scipy
-from scipy.optimize import minimize
-import time
-import pygmo as pg
-from scipy.stats import uniform
-from pyDOE import lhs
-from scipy import optimize
-import pandas as pd
 
-import scipy.integrate as integrate
-import scipy.special as special
-
-import time
-from scipy.stats import truncnorm
-from scipy.interpolate import interp1d
 
 class Mult_Input_Uncert():
 
-    def __init__(self, f, inf_src, xran, wran):
-        # This code here is executed when we make a new optimizer myoptimizer = Mult_Input_Uncert()
-        #
-        # ARGS:
-        #  test_func: a callable function y = f(x, w) that returns simulations outputs
-        #  input_source: a callable source of data that returns "external" observations
-        #  xran: the upper and lower limit of x in f(x,w)
-        #  wran: the upper and lower limit of w in f(x,w)
-        #
-        # RETURNS
-        #  self: a Mult_Input_Uncert instance, __init__ is an initilizer/constructor!!
+    def __init__(self):
+        pass
 
-        self.test_func = test_func
-        self.input_source = input_source
-        self.xran = xran
-        self.wran = wran
-        self.prior=
+    def __call__(self, sim_fun, inf_src ,
+                      lb_x, ub_x,
+                      lb_a, ub_a,
+                      distribution="MU_t_S",
+                      n_fun_init = 10,
+                      n_inf_init = 0,
+                      Budget = 9,
+                      Nx = 101,
+                      Na = 102,
+                      Nd = 103,
+                      var_data = None,
+                      GP_train = True,
+                      GP_train_relearning=False,
+                      Gpy_Kernel = None,
+                      opt_method = "BICO", rep = None,
+                       save_only_last_stats=False,
+                      calculate_true_optimum=True,
+                    results_name="SIM_RESULTS"):
 
-    def __call__(self, init_sample=10, Nx = 101, Nr=100, EndN=100, precision=100,
-                 seed=1):
-        # THIS IS WHERE THE MAIN CODE FOR OPTIMIZATION GOES :)
-        # This code is run when myoptimizer(sim_init=...) is called as if
-        # it were a function. We could also just do myoptimizer.__call__(....)
-        # or we would make def optimize(self, sim_init=...) and call myoptimizer.optimize(...)
-        # this __call__ is a python keyword that is executed when the object is treated as a function
-        #
-        # ARGS:
-        #  init_sample: how many points to use to start the Gaussain process
-        #  Nx: discretization size over x space
-        #  Nr: discretization size over w space
-        #  EndN: sampling budget for optimization
-        #  precision:
-        #
-        # RETURNS
-        #  OC: opportunity cost
-        #  xw: GP data
-        #  z: iu data
-        #  otherstuff: I forgot....
+        """
+        Optimizes the test function integrated over IU_dims. The integral
+        is also changing over time and learnt.
 
-        dim = self.xran.shape[1] + self.wran.shape[1]
-        x= np.linspace(0, 100, Nx) #vector of input variable
-        MU = np.linspace(0,100,precision)
-        SIG = np.linspace(0.025,100,precision)
-        X = np.repeat(list(MU),len(SIG))
-        W=list(SIG)*len(MU)
-        MUSIG0 = np.c_[X,W]
+        :param sim_fun: callable simulator function, input (x,a), returns scalar
+        :param inf_src: callable data source function, returns scalar
+        :param lb_x: lower bounds on (x) vector design to sim_fun
+        :param ub_x: upper bounds on (x) vector design to sim_fun
+        :param lb_a: lower bounds on (a) vector input to sim_fun
+        :param ub_a: upper bounds on (a) vector input to sim_fun
+        :param distribution: which prior/posterior to use for the uncertain parameters
+        :param n_fun_init: number of inital points for GP model
+        :param n_inf_init: number of intial points for info source
+        :param Budget: total budget of calls to test_fun and inf_src
+        :param Nx: int, discretization size of X
+        :param Na: int, sample size for MC over A
+        :param Nd: int, sample size for Delta Loss
+        :param var_data: int, True variance of Data for inference in distribution "KG_fixed_iu".
+        :param Gpy_Kernel: GPy object, include GPy kernel with learnt hyperparameters.
+        :param GP_train: Bool. True, Hyperparameters are trained in every iteration. False, uses pre-set parameters
+        :param save_only_last_stats: Bool. True, only compute True performance in the end. False, compute at each
+        iteration. True setting is recommended for expensive experiments.
+        :param: calculate_true_optimum. True. Produces noisy performance instead of real expected performance.
+        :param opt_method: Method for IU-optimisation:
+               -"KG_DL": Compares Knowledge Gradient and Delta Loss for every iteration of the algorithm.
+               -"KG_fixed_iu": Updates the Data/Input posterior initially with n_inf_init and only
+               uses Knowledge gradient.
 
-        MU_L = np.linspace(0,100,101)
-        SIG_L = np.linspace(0.025,100,101)
-        X_L = np.repeat(list(MU_L),len(SIG_L))
-        W_L=list(SIG_L)*len(MU_L)
-        MUSIG0_L = np.c_[X_L,W_L]
-        init_input_source = Input_Source(dim,0)
+        :param rep: int, number that identifies one specific run of the experiment (whole budget)
 
-        # First get some simulation ( (X, W), Y) pairs for training the GP.
-        XA = np.c_[lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100, lhs(1, samples=init_sample)*100]
-        Y = self.test_func(xa=XA)
-        ker = GPy.kern.RBF(input_dim=3, variance=1., lengthscale=([10,10,10]), ARD = True)
+        RETURNS
+            X: observed test_func inputs
+            Y: observed test_func outputs
+            Data: list of array of inf_src observations
 
-        iLoss = []
-        OC = []
-        #===================================================================================
-        #True Func
+            """
 
-        XW0 = np.c_[ x, np.array([Input_Source.f_mean]*len(x))]
-        True_obj_v = test_func(xa=XW0,NoiseSD=0,gen=False)
-        obj     = lambda a: -1*np.mean(test_func(np.c_[[a],[Input_Source.f_mean]],NoiseSD=0,gen=False))
-        topX    = x[np.argmax(True_obj_v)]
+        self.calculate_true_optimum = calculate_true_optimum
+        self.kill_signal = False
+        lb_x = lb_x.reshape(-1)
+        ub_x = ub_x.reshape(-1)
 
+        lb_a = lb_a.reshape(-1)
+        ub_a = ub_a.reshape(-1)
 
-        if topX >= 100:
-            topX=99
-        elif topX <=0:
-            topX=1
+        lb = np.concatenate((lb_x,lb_a))
+        ub = np.concatenate((ub_x,ub_a))
 
-        topX = optimize.fminbound(obj, topX-1, topX+1,xtol =1e-16)
-        best_ = -1*obj(topX)
+        dim_X = sim_fun.dx
 
-        #=================================================================================================
-        Data =  np.array([[np.nan,np.nan]]) #init_input_source #
-        Ndata = 0
+        lb = lb.reshape(-1)
+        ub = ub.reshape(-1)
+        print("dimX", dim_X, "lb", lb.shape[0])
+        assert dim_X < lb.shape[0], "More X dims than possible"
+        assert lb.shape[0] == ub.shape[0], "bounds must be same shape"
+        assert np.all(lb <= ub), "lower must be below upper!"
 
-        while len(XA) +  Ndata < EndN:
+        assert ub.shape[0] == lb.shape[0], "lb and ub must be the same shape!"
 
-            Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
-            self.model = GPy.models.GPRegression(np.array(XA) , np.array(Y).reshape(len(Y),1) , ker,noise_var=0.01)
-            Mult_Input_Uncert.m = m
+        # set the distribution to use for A dimensions.
+        if distribution == "trunc_norm":
+            """
+            trunc_norm_post: by specifying the variance of the data var_data, calculates data posterior
+            and input posterior using uniform prior and gaussian likelihood.
+            """
+            if var_data is None:
+                var_data = np.repeat(1,len(lb_a))
 
-            Mult_Input_Uncert.KG=[]
-            Mult_Input_Uncert.DL1 = []
-            Mult_Input_Uncert.DL2 = []
+            post_maker = trunc_norm_post(amin=inf_src.lb, amax=inf_src.ub, var= var_data )
+        elif distribution == "MU_t_S":
+            """ 
+            MUSIG_post: marginalises uncertainty over the variance
+            """
+            post_maker = MU_s_T_post(amin=inf_src.lb, amax=inf_src.ub)
 
-        #ERROR CURVE
-            if Ndata > 0:
-    #             print('Nr',Nr)
-                x_pdf1, pdf1 = Fit_Inputs(Data[:,0])
-                x_pdf2, pdf2 = Fit_Inputs(Data[:,1])
+        elif distribution == "MUSIG":
+            """ 
+            MUSIG_post: joint distribution mu and sigma given data. Same MUSIG_post but without marganilising variance
+            """
 
-                #Generation of RV
-                pdf1_gen = Gen_Sample(pdf1,N=Nr)
-                pdf2_gen = Gen_Sample(pdf2,N=Nr)
-                # Sample variable x inputs
-                Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx, list(pdf2_gen)*Nx ]
-            else:
-                pdf1_gen = np.random.random(Nr)*100
-                pdf2_gen = np.random.random(Nr)*100
+            post_maker = Gaussian_musigma_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
+                                                    lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
 
-                Sample = np.c_[np.repeat(x,Nr) , list(pdf1_gen)*Nx,list(pdf2_gen)*Nx]
+        elif distribution == "Exponential":
+            post_maker = Exponential_inference(amin=inf_src.lb, amax=inf_src.ub, prior_n_pts=n_inf_init,
+                                                    lb=lb_a,ub=ub_a, lbx=lb_x, ubx=ub_x)
 
-            IU = np.mean(self.model.predict(np.array(Sample))[0].reshape(Nx,Nr),axis=1)
-
-            Xr = x[np.argmax(IU)]
-
-
-            topobj = -1*obj(Xr)
-            DIF = best_ - topobj
-
-            OC.append(DIF)
-
-            #===============================================================================================
-
-            xa, p = KG_Mc_Input(XA,Y,self.model,Nx=Nx,Ns=20)
-
-            Comparison = np.concatenate(([KG_Mc_Input.bestEVI],[Delta_Loss(Data,i) for i in range(dim)]))
-            chs = np.argmax(Comparison)
-
-            d_point = np.array([[np.nan, np.nan]])
-            if chs == 0:
-                XA = np.concatenate((XA,xa)) ; Y = np.concatenate([Y,p])
-            else:
-
-                QA = chs - 1
-                IS = Input_Source(2,1,mv_gen = False)[0][QA]
-                d_point[:,QA] = IS
-                Data = np.concatenate((Data, d_point))
-                Ndata = np.sum([len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)])
-
-
-            N_I = [len(Data[:,i][~np.isnan(Data[:,i])]) for i in range(dim)]
-            return OC, N_I, Mult_Input_Uncert.var
-
-    def COV(self, xa1, xa2):
-        #K = self.model.kern.K(model.X,model.X)
-        L = self.chol_K #np.linalg.cholesky(K + (0.1**2.0)*np.eye(len(K)))
-        Lk1 = np.linalg.solve(L, self.model.kern.K(self.model.X, xa1))
-        Lk2 = np.linalg.solve(L, self.model.kern.K(self.model.X, xa2))
-        K_ = self.model.kern.K(xa1, xa2)
-        s2 = np.matrix(K_) - np.matrix(np.dot(Lk2.T,Lk1))
-        return s2
-
-    def VAR(self, xa1):
-        # K = model.kern.K(model.X, model.X)
-        L = self.chol_K #np.linalg.cholesky(K + (0.1**2.0)*np.eye(len(K)))
-        Lk = np.linalg.solve(L, model.kern.K(self.model.X, xa1))
-        K_ = self.model.kern.K(xa1, xa1)
-        s2 = K_ - np.sum(Lk**2, axis=0)
-        return s2
-
-    def Gen_Sample(Dist, N=500):
-        # generates N samples between 0 and 100 with given 'Dist' weights
-        elements = np.linspace(0, 100, len(Dist))
-        probabilities = Dist/np.sum(Dist)
-        val = np.random.choice(elements, N, p=probabilities)
-        return val
-
-    def sample_predict_dens(Data, N):
-        global MUSIG0, MU_L, SIG_L, MUSIG0_L
-
-        Data = list(Data[~np.isnan(Data)])
-        def Distr_Update(Data):
-            Y =Data
-            L = []
-            fy = []
-            y_n1 = np.linspace(0,100,200)
-
-            for i in MUSIG0_L:
-                fy.append(np.exp(-(1.0/(2.0*i[1]))*(i[0] - y_n1)**2.0))
-                L.append(np.exp(-(1.0/(2.0*i[1]))*np.sum((i[0] - Y)**2.0))*(1.0/np.sqrt(2*np.pi*i[1]))**len(Y))
-            dmu = MU_L[1]-MU_L[0]
-            dsig = SIG_L[1]-SIG_L[0]
-            dy_n1 = y_n1[1]-y_n1[0]
-
-            L = np.matrix(L)
-            fy = np.matrix(fy)
-            D = np.array((np.matrix(L))*np.matrix(fy)*dmu*dsig)
-            D = np.array((D/np.sum(D*dy_n1)))[0]
-            return D
-
-        pdf_zn = Distr_Update(Data)
-
-        zn = Gen_Sample(pdf_zn, N)
-        return zn
-
-    def Delta_Loss(Data, idx):
-        global Nr,Nx
-
-        Nd = 100
-        #INPU: Matrix with N dimensions and S realisations
-        def W_aj(Y=np.array([]),a=np.array([])):
-
-            MU = np.linspace(0,100,60)
-            SIG = np.linspace(0.25,100,60)
-            d = np.vstack(np.hstack(Y))
-            N = Y.shape[1]
-            dimY = Y.shape[0]
-            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-MU)**2,dimY,axis=0),axis=1)))
-
-            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-
-            L = np.split(expo*consts, dimY, axis=1)
-            marg_mu_dist = np.sum(L,axis=1)*(SIG[1]-SIG[0])
-            C = np.sum(marg_mu_dist,axis=1)*(MU[1]-MU[0])
-            marg_mu_dist = marg_mu_dist*(1/np.vstack(C))
-
-            expo = np.exp(np.vstack(-(1.0/(2.0*SIG)))*np.hstack(np.sum(np.split((d-a)**2,dimY,axis=0),axis=1)))
-            consts =  np.vstack((1.0/np.sqrt(2*np.pi*SIG))**N)
-            L = np.split(expo*consts,dimY,axis=1)
-            marg_mu_val = np.sum(L,axis=1)*(SIG[1]-SIG[0])*(1/np.vstack(C))
-            return marg_mu_val
-
-        if len(np.array([list(Data[~np.isnan(Data[:,idx]),idx])])[0]) > 0:
-
-            z1 = sample_predict_dens(np.array([list(Data[~np.isnan(Data[:,idx]),idx])]),N=Nd)
-            Sample_I = Sample[:,idx+1]
-            Sample_XA = Sample
-            W_D = W_aj(Y=np.array([list(Data[~np.isnan(Data[:,idx]),idx])]), a=Sample_I)
-
-
-            dj = np.c_[np.array([list(Data[~np.isnan(Data[:,idx]),idx])]*Nd),z1]
         else:
+            raise NotImplementedError
 
-            z1 = np.random.random(Nd)*100
-            Sample_I = Sample[:,idx+1]
-            Sample_XA = Sample
-            W_D = np.array([list(np.repeat([1.0/100],Nx*Nr))])
-            dj = np.vstack(z1)
+        # we will need this for making discretizations.
+        X_sampler = lambda n: lhs_box(n, lb[:dim_X], ub[:dim_X])
 
-        R_IU = []
-        W_D1 = W_aj(Y=dj, a=Sample_I)
+        # Initilize GP model
+        print("\ninitial design")
 
-        Wi = W_D1/W_D
-        Mult_Input_Uncert.Wi = Wi.reshape(Nd,Nx,Nr)
+        XA = lhs_box(n_fun_init, lb, ub)
+        print("XA",XA)
+        Y = sim_fun(XA[:,0:dim_X], XA[:,dim_X:XA.shape[1]])
+        ker = GPy.kern.RBF(input_dim=lb.shape[0], variance=10000., lengthscale=(ub - lb) * 0.1, ARD=True)
 
-        Prd = Mult_Input_Uncert.m.predict(np.array(Sample_XA))[0].reshape(Nx, Nr)
-        Mult_Input_Uncert.Prd = Prd
-        IU_D1 = np.mean(np.multiply(Mult_Input_Uncert.Wi,Mult_Input_Uncert.Prd),axis=2)
-
-        max_IU_D1 = np.max(IU_D1,axis=1)
-
-        Prd_D = m.predict(np.array(np.c_[np.repeat(Xr,Nr),Sample[:Nr,1:3]]))[0].T
-        Mult_Input_Uncert.Prd_D = Prd_D
-
-        IU_D = np.mean(np.mean(np.multiply(Mult_Input_Uncert.Wi,Mult_Input_Uncert.Prd_D),axis=2),axis=1)
-        DL = np.mean(max_IU_D1-IU_D)
-
-        return DL
+        if Gpy_Kernel != None:
+            ker = Gpy_Kernel
 
 
-    def KG_Mc_Input(self, XA, P, model, Nx=15,Ns=20):
-        global best_obj_v
-        #np.random.seed(np.int(time.clock()*10000))
-        KG_Mc_Input.Ns = Ns
-        KG_Mc_Input.bestEVI = -10
-        KG_Mc_Input.bestxa  = [-10,-10,-10]
-        KG_Mc_Input.noiseVar = model.Gaussian_noise.variance[0]
-        KG_Mc_Input.Xi = np.array(XA[:,0])
-        KG_Mc_Input.Xi.sort()
 
-        KG_Mc_Input.Ad = np.c_[pdf1_gen, pdf2_gen] #1000
-        KG_Mc_Input.XiAd  = np.c_[np.repeat(KG_Mc_Input.Xi,len(KG_Mc_Input.Ad) ), list(pdf1_gen)*len(KG_Mc_Input.Xi), list(pdf2_gen)*len(KG_Mc_Input.Xi)]
-        #print('KG_Mc_Input.Ad',KG_Mc_Input.Ad)
+        # Initilize input uncertainty data via round robin allocation
+        dim_A =  inf_src.n_srcs
 
-        obj_v = np.sum(m.predict(KG_Mc_Input.XiAd)[0].reshape(len(KG_Mc_Input.Xi),len(KG_Mc_Input.Ad)),axis=1)
-        obj_v = np.array(obj_v).reshape(len(obj_v),1)
+        if type(n_inf_init) is int:
+            alloc = np.arange(n_inf_init) % dim_A
+            alloc = [np.sum(alloc == i) for i in range(dim_A)]
+            Data = [inf_src(n=alloc[i], src=i) for i in range(dim_A)]
+        elif (type(n_inf_init) is np.ndarray) | (type(n_inf_init) is list):
+            n_inf_init = np.array(n_inf_init)
+            n_inf_init = np.round(n_inf_init)
+
+            assert np.any(n_inf_init <0) == False, "Please insert an allocation greater than 0"
+            assert len(n_inf_init)  == dim_A, "Dimension of allocation for data sources != DimA"
+
+            Data = [inf_src(n=n_inf_init[i], src=i) for i in range(dim_A)]
+        else:
+            print("please introduce np.array,or list to specify number of samples. Insert int for uniform allocation")
+            raise
+
+        # this can be called at any time to get the number of Data collected
+        Ndata = lambda: np.sum([d_src.shape[0] for d_src in Data])
 
 
-        def KG_IU(xa):
+        print("Initialization complete, budget used: ", n_fun_init + np.sum(n_inf_init), "\n")
 
-            if(np.abs(xa[0]-50)>50 or np.abs(xa[1]-50)>50 or np.abs(xa[2]-50)>50):
-                return(1000000)
+        print("\nStoring Data...")
+        # Calculates statistics of the simulation run. It's decorated to save stats in a csv file.
+
+
+        stats = store_stats(sim_fun, inf_src, dim_X, lb.shape[0], lb, ub, fp=str(np.sum(n_inf_init)), B=int(Budget-np.sum(n_inf_init)) , rep=rep,results_name=results_name,
+                            save_only_last_stats=save_only_last_stats,calculate_true_optimum=self.calculate_true_optimum)
+
+        # Let's get the party started!
+
+        # GP Maximum likelihood training
+        Gaussian_noise = 0.01
+        if GP_train == True:
+            # print("XA", XA)
+            GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+            GPmodel.optimize_restarts(10, robust=True, verbose=True)
+            GPmodel.Gaussian_noise.variance.constrain_bounded(1e-2, 2)
+            Gaussian_noise = GPmodel.Gaussian_noise.variance
+            if Gaussian_noise < 1e-9:
+                Gaussian_noise = 1e-3
+
+        else:
+            GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), Gpy_Kernel, noise_var=0.01)
+
+
+        while XA.shape[0] + Ndata() < Budget:
+            start = time.time()
+            print("Iteration ", XA.shape[0] + Ndata() + 1, ":")
+
+            if GP_train_relearning == True:
+
+                Gaussian_noise = 0.01
+
+                GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+                GPmodel.Gaussian_noise.variance.constrain_bounded(1e-4, 0.2)
+                GPmodel.optimize_restarts(10, robust=True, verbose=True)
+
+                Gaussian_noise = GPmodel.Gaussian_noise.variance
+                if Gaussian_noise < 1e-9:
+                    Gaussian_noise = 1e-3
             else:
+                GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var=0.01)
+                    # GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), ker, noise_var= Gaussian_noise)
+            # Fit model to simulation data.
 
-                newx = np.array(np.c_[np.repeat(xa[0],len(KG_Mc_Input.Ad)),KG_Mc_Input.Ad])
+            # Discretize X by lhs and discretize A with posterior samples as required.
+            X_grid = X_sampler(Nx)
 
-                MMx = np.sum(model.predict(newx)[0])
+            # be samples from posterior over A!
+            A_density, A_sampler, _ = post_maker(Data)
 
-                MM     =  np.c_[MMx,obj_v.T].reshape(len(np.c_[MMx,obj_v.T].T),1)
+            A_grid = [A_sampler(n=Na, src_idx=i) for i in range(inf_src.n_srcs)]
+            W_A = [A_density(A_grid[i], src_idx=i) for i in range(inf_src.n_srcs)]
 
-                MM = MM/(len(KG_Mc_Input.Ad ))
 
-                sigt2 = np.diag(COV(m,np.array([xa]),KG_Mc_Input.XiAd)).reshape(len(KG_Mc_Input.Xi),len(KG_Mc_Input.Ad))
-                sigt2 = np.array(np.sum(sigt2,axis=1)).reshape(len(sigt2),1)
+            # Get KG of both simulation and Input uncertainty.
 
-                sigt2 = np.c_[np.sum(np.diag(COV(m,np.array([xa]),newx))),sigt2.T].T
-                sigt1   = self.VAR(np.array([xa]))
-                sigt    = ((sigt2) / np.sqrt(sigt1+KG_Mc_Input.noiseVar))
-                sigt = sigt/(len(KG_Mc_Input.Ad ))
+            if XA.shape[0] + Ndata() == Budget-1:
+                self.kill_signal = True
+            else:
+                self.kill_signal = False
 
-                musig = np.c_[MM,sigt]
-                out  = KG(musig)
-                if out > KG_Mc_Input.bestEVI:
-                    KG_Mc_Input.bestEVI = out
-                    KG_Mc_Input.bestxa = xa
-                return -out
 
-        # random restarts for optimization
-        XAs = np.array(np.c_[lhs(1, samples=KG_Mc_Input.Ns)*100,lhs(1, samples=KG_Mc_Input.Ns)*100,lhs(1, samples=KG_Mc_Input.Ns)*100])
+            if opt_method == "BICO":
 
-        # run nelder mead for each random restart
-        A    = [minimize(KG_IU, i, method='nelder-mead', options={'maxiter': 80}).x for i in XAs]
-        Y = test_func(np.array([list(KG_Mc_Input.bestxa)]),gen=False)
+                XA,Y,Data = self.BICO_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
+                                           A_grid, W_A, post_maker,
+                                           Nd, lb, ub,stats,dim_X)
 
-        return np.array([list(KG_Mc_Input.bestxa)]) , np.array(Y)
+            elif opt_method == "Benchmark":
+                XA,Y,Data = self.KG_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
+                                           A_grid, W_A, post_maker,
+                                           Nd, lb, ub,stats,dim_X)
+            else:
+                raise NotImplementedError
+
+        return [XA], [Y], [Data]
+
+    def BICO_alg(self , sim_fun,inf_src,GPmodel, XA,
+                  Y, Data, X_grid, A_grid, W_A,
+                  post_maker, Nd, lb, ub,stats,dim_X):
+        """
+
+        :param sim_fun: callable simulator function, input (x,a), returns scalar
+        :param inf_src: callable data source function, returns scalar
+        :param GPmodel: Trained Gaussian Process model
+        :param XA: ndarray, observed test_func inputs
+        :param Y: ndarray, output of test_func inputs
+        :param Data: list of arrays, observed output data from input source n_source
+        :param X_grid: X grid set by latin hypercube
+        :param A_grid: A grid specified by sampling from input posterior
+        :param W_A: density evaluated at specified grid.
+        :param post_maker: object, object that collects posterior input density, posterior density sampler,
+        posterior data sampler.
+        :param Nd: int, sample size for Delta Loss
+        :param lb: concatenated lower bounds (x,a)
+        :param ub: concatenated upper bounds (x,a)
+        :param stats: object, storing stats functions
+        :param dim_X: dimensionality of input design for simulator function
+
+        RETURNS
+            X: observed test_func inputs
+            Y: observed test_func outputs
+            Data: list of array of inf_src observations
+        """
+
+        #Combutes Value of information for simualtion data
+        topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
+        print("Best is simulator: ", topxa, topKG)
+
+        #Computes Value of Information for external data
+        topsrc, topDL = DeltaLoss(GPmodel, Data, X_grid, A_grid, W_A, post_maker,  lb, ub, Nd)
+        print("Best is info source: ", topsrc, topDL)
+
+        #Compute statistics and produce file
+        stats(model = GPmodel,
+              Data = Data,
+              XA = XA,
+              Y = Y,
+              Decision = topDL>topKG,
+              A_sample = A_grid,
+              KG = [topxa, topKG],
+              DL = [topsrc, topDL],
+              kill_signal=self.kill_signal,
+              HP_names=GPmodel.parameter_names(),
+              HP_values=GPmodel.param_array)
+
+        #Update Data set variables
+        if topKG > topDL:
+            # if simulation is better
+            print("topxa", topxa)
+
+            # print("topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]]",topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]])
+            new_y = func_caller(func = sim_fun, x = topxa[:, 0:dim_X], a = topxa[:, dim_X:XA.shape[1]])
+
+            XA = np.vstack([XA, topxa])
+            Y = np.concatenate([Y, new_y])
+
+        else:
+            # if info source is better
+            new_d = inf_src(n=1, src=topsrc)
+            print("new_d", new_d, "Data[topsrc]", Data[topsrc])
+            Data[topsrc] = np.concatenate([Data[topsrc], new_d.reshape(-1)])
+
+        print("XA", XA)
+        print("Y", Y)
+        print("Data", Data)
+        return XA,Y,Data
+
+    def KG_alg(self , sim_fun,inf_src,GPmodel, XA,
+                  Y, Data, X_grid, A_grid, W_A,
+                  post_maker, Nd, lb, ub,stats,dim_X):
+
+        """
+
+        :param sim_fun: callable simulator function, input (x,a), returns scalar
+        :param inf_src: callable data source function, returns scalar
+        :param GPmodel: Trained Gaussian Process model
+        :param XA: ndarray, observed test_func inputs
+        :param Y: ndarray, output of test_func inputs
+        :param Data: list of arrays, observed output data from input source n_source
+        :param X_grid:
+        :param A_grid:
+        :param W_A:
+        :param post_maker:
+        :param Nd: int, sample size for Delta Loss
+        :param lb: concatenated lower bounds (x,a)
+        :param ub: concatenated upper bounds (x,a)
+        :param stats: object, storing stats functions
+        :param dim_X: dimensionality of input design for simulator function
+
+        RETURNS
+            X: observed test_func inputs
+            Y: observed test_func outputs
+            Data: list of array of inf_src observations
+        """
+
+        #Combutes Value of information for simualtion data
+        topxa, topKG = KG_Mc_Input(GPmodel, X_grid, A_grid, lb, ub)
+        print("Best is simulator: ", topxa, topKG)
+
+        topsrc, topDL = [np.nan,np.nan]
+
+        stats(GPmodel, Data, XA, Y, A_grid, [topxa, topKG], [topsrc, topDL], kill_signal=self.kill_signal,HP_names=GPmodel.parameter_names(),
+              HP_values=GPmodel.param_array)
+
+        print("topxa", topxa)
+
+        new_y = func_caller( sim_fun, topxa[:, 0:dim_X], topxa[:, dim_X:XA.shape[1]])
+
+        XA = np.vstack([XA, topxa])
+        Y = np.concatenate([Y, new_y])
+        return XA,Y,Data
+
+
+
+
+
