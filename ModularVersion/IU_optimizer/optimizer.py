@@ -181,7 +181,9 @@ class Mult_Input_Uncert():
         else:
             GPmodel = GPy.models.GPRegression(XA, Y.reshape(-1, 1), Gpy_Kernel, noise_var=0.01)
 
+
         while XA.shape[0] + Ndata() < Budget:
+            start = time.time()
             print("Iteration ", XA.shape[0] + Ndata() + 1, ":")
 
             if GP_train_relearning == True:
@@ -223,6 +225,7 @@ class Mult_Input_Uncert():
                 XA,Y,Data = self.BICO_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
                                            Nd, lb, ub,stats,dim_X)
+
             elif opt_method == "Benchmark":
                 XA,Y,Data = self.KG_alg(sim_fun, inf_src,GPmodel, XA, Y, Data, X_grid,
                                            A_grid, W_A, post_maker,
