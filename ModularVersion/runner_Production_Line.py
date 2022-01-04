@@ -15,17 +15,10 @@ def function_caller(rep):
 	print("\nCalling optimizer")
 	myoptimizer = Mult_Input_Uncert()
 
-	# f = newsvendor()
-	# x = np.linspace(f.xmin,f.xmax,100)
-	# y = np.linspace(f.amin,f.amax,100)
-	# X,Y = np.meshgrid(x,y)
-	# plt.contourf(X,Y,f(x,y).reshape(len(x),len(y)))
-	# plt.plot()
-	# # now run the optimizer 100 times and save all outputs
 	"""
 	Choose optimsiation method between:
-	- KG_DL: Use Knowledge gradient and Delta Loss for sampling.
-	- KG_fixed_iu: use fixed quantity of data source points initially and optimise by KG.
+	- BICO: Use Knowledge gradient and Value of Information for external data sources for sampling.
+	- Benchmark: use fixed quantity of data source points initially and optimise by KG.
 
 	Choose distribution method between:
 	-trunc_norm: Normal Likelihood and Uniform prior for input. Assumes known variance in the data.
@@ -38,9 +31,6 @@ def function_caller(rep):
 	True_Input_distributions = [expon(scale=np.reciprocal(True_rate))]  # [gamma(a=k,loc=0,scale=theta)]#
 	Assumed_Input_Distributions = [np.random.normal]
 
-	# plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
-	# plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
-	# plt.show()
 
 	Simulator = Production_Line(True_rate=True_rate)
 	Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=Simulator.amin,

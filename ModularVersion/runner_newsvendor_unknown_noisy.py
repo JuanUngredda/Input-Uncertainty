@@ -13,17 +13,10 @@ from scipy.stats import norm
 print("\nCalling optimizer")
 myoptimizer = Mult_Input_Uncert()
 
-# f = newsvendor()
-# x = np.linspace(f.xmin,f.xmax,100)
-# y = np.linspace(f.amin,f.amax,100)
-# X,Y = np.meshgrid(x,y)
-# plt.contourf(X,Y,f(x,y).reshape(len(x),len(y)))
-# plt.plot()
-# # now run the optimizer 100 times and save all outputs
 """
 Choose optimsiation method between:
-- KG_DL: Use Knowledge gradient and Delta Loss for sampling.
-- KG_fixed_iu: use fixed quantity of data source points initially and optimise by KG.
+	- BICO: Use Knowledge gradient and Value of Information for external data sources for sampling.
+	- Benchmark: use fixed quantity of data source points initially and optimise by KG.
 
 Choose distribution method between:
 -trunc_norm: Normal Likelihood and Uniform prior for input. Assumes known variance in the data.
@@ -32,12 +25,7 @@ Choose distribution method between:
 """
 def function_caller(rep):
     np.random.seed(rep+200)
-    mu = 40.0
-    var = 10.0
-
-    k = mu ** 2 / var
-    theta = var / mu
-    True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]  # [gamma(a=k,loc=0,scale=theta)]#
+    True_Input_distributions = [norm(loc=40, scale=np.sqrt(10))]
     Assumed_Input_Distributions = [np.random.normal]
 
     # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
@@ -62,11 +50,11 @@ def function_caller(rep):
                                     GP_train=True,
                                     GP_train_relearning=True,
                                     var_data=None,
-                                    opt_method="KG_DL",
-                                    rep=str(rep+200),
+                                    opt_method="BICO",
+                                    rep=str(rep),
                                     save_only_last_stats=False,
                                     calculate_true_optimum=False,
                                     results_name="Newsvendor_BICO_RESULTS")
 
 # for r in range(5,30,1):
-#     function_caller(rep=r)
+# function_caller(rep=1)

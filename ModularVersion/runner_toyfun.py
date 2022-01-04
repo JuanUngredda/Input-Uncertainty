@@ -3,19 +3,15 @@
 # This is just rough draft code and almost definitely doesn't work!
 # I have just put it here to show how to structure the code :)
 
-
 from IU_optimizer import *
 from TestProblems.Toy import GP_test
 from TestProblems import Information_Source
 
-
-
-
 # # now run the optimizer 100 times and save all outputs
 """
 Choose optimsiation method between:
-- KG_DL: Use Knowledge gradient and Delta Loss for sampling.
-- KG_fixed_iu: use fixed quantity of data source points initially and optimise by KG.
+	- BICO: Use Knowledge gradient and Value of Information for external data sources for sampling.
+	- Benchmark: use fixed quantity of data source points initially and optimise by KG.
 
 Choose distribution method between:
 -trunc_norm: Normal Likelihood and Uniform prior for input. Assumes known variance in the data.
@@ -33,13 +29,9 @@ def function_caller(rep):
         mu1 = 40
         var0 = v_mx[0]
         var1 = v_mx[1]
-        # for i in range(0, 90, 5):
-        #     print("i",i)
+
         True_Input_distributions = [norm(loc=mu0, scale=np.sqrt(var0)), norm(loc=mu1, scale=np.sqrt(var1)),]
 
-        # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
-        # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
-        # plt.show()
 
         Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=np.zeros(2),
                                                           ub=np.ones(2)*100, d=2)
@@ -58,11 +50,11 @@ def function_caller(rep):
                             GP_train=False,
                             GP_train_relearning=False,
                             var_data=np.array([var0,var1]),
-                            opt_method="KG_DL",
+                            opt_method="BICO",
                             Gpy_Kernel=Simulator.KERNEL,
                             rep=str(rep),
                             save_only_last_stats=False,
                             calculate_true_optimum=False,
                             results_name="synthetic_different_vars_"+str(var0)+"_"+str(var1)+"_RESULTS")
 
-# function_caller(rep=5)
+function_caller(rep=5)

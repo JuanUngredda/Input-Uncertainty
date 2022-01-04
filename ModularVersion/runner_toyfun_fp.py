@@ -23,7 +23,7 @@ def function_caller(rep):
     print("\nCalling optimizer")
     myoptimizer = Mult_Input_Uncert()
 
-    rep = rep + 100
+    rep = rep
     var_mix = [[5,10]]
     for v_mx in var_mix:
         mu0 = 40
@@ -31,21 +31,15 @@ def function_caller(rep):
         var0 = 5
         var1 = 10
 
-        # for i in range(0, 90, 5):
-        #     print("i",i)
         True_Input_distributions = [norm(loc=mu0, scale=np.sqrt(var0)), norm(loc=mu1, scale=np.sqrt(var1)),]  # [gamma(a=k,loc=0,scale=theta)]#
-
-        # plt.hist(True_Input_distributions[0].rvs(1000), bins=200, density=True)
-        # plt.hist(np.random.normal(mu, np.sqrt(var), (1, 1000)).reshape(-1), bins=200, density=True)
-        # plt.show()
 
         Information_Source_Generator = Information_Source(Distribution=True_Input_distributions, lb=np.zeros(2),
                                                           ub=np.ones(2)*100, d=2)
         Simulator = GP_test(xamin=[0,0,0], xamax=[100,100,100], seed=11, x_dim=1, a_dim=2, true_params=[mu0,mu1])
 
 
-        for m0 in [2,30,40]:#[7, 9, 11, 12, 13, 15, 17, 19, 20]: #range(2,50,5):
-            for m1 in [2 , 7, 9, 11, 12, 13, 15, 17, 19, 20, 30, 40]: # range(2,50,5):
+        for m0 in range(2,50,5):
+            for m1 in range(2,50,5):
                 np.random.seed(rep)
                 [XA], [Y], [Data] = myoptimizer(sim_fun = Simulator, inf_src= Information_Source_Generator,
                                     lb_x=Simulator.xmin, ub_x=Simulator.xmax,
@@ -60,11 +54,11 @@ def function_caller(rep):
                                     GP_train=False,
                                     GP_train_relearning=False,
                                     var_data=np.array([var0,var1]),
-                                    opt_method="KG_fixed_iu",
+                                    opt_method="Benchmark",
                                     Gpy_Kernel=Simulator.KERNEL,
                                     rep=str(rep),
                                     save_only_last_stats=False,
                                     calculate_true_optimum=False,
                                     results_name="synthetic_different_vars_fp_"+str(m0)+"_"+str(m1)+"_RESULTS")
 
-# function_caller(rep=9)
+function_caller(rep=9)
